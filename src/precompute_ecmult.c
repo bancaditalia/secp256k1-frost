@@ -10,7 +10,7 @@
 /* Autotools creates libsecp256k1-config.h, of which ECMULT_WINDOW_SIZE is needed.
    ifndef guard so downstream users can define their own if they do not use autotools. */
 #if !defined(ECMULT_WINDOW_SIZE)
-#include "libsecp256k1-config.h"
+#include "libsecp256k1frost-config.h"
 #endif
 
 #include "../include/secp256k1.h"

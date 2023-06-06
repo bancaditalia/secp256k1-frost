@@ -395,7 +395,7 @@ fi
 ### Generate output
 ###
 
-AC_CONFIG_HEADERS([src/libsecp256k1-config.h])
+AC_CONFIG_HEADERS([src/libsecp256k1frost-config.h]) # FROST_SPECIFIC: it was "libsecp256k1-config.h"
 AC_CONFIG_FILES([Makefile libsecp256k1frost.pc]) # FROST_SPECIFIC: it was "libsecp256k1.pc"
 AC_SUBST(SECP_INCLUDES)
 AC_SUBST(SECP_LIBS)
