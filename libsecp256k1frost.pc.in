@@ -3,11 +3,11 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libsecp256k1
+Name: libsecp256k1frost
 Description: Optimized C library for EC operations on curve secp256k1, with support for FROST signature scheme # FROST_SPECIFIC
 URL: https://github.com/bancaditalia/secp256k1-frost # FROST_SPECIFIC
 Version: @PACKAGE_VERSION@
 Cflags: -I${includedir}
-Libs: -L${libdir} -lsecp256k1
+Libs: -L${libdir} -lsecp256k1frost
 Libs.private: @SECP_LIBS@
 

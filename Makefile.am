@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I build-aux/m4
 # which does not have an explicit foo_CFLAGS variable set.
 AM_CFLAGS = $(SECP_CFLAGS)
 
-lib_LTLIBRARIES = libsecp256k1.la
+lib_LTLIBRARIES = libsecp256k1frost.la
 include_HEADERS = include/secp256k1.h
 include_HEADERS += include/secp256k1_preallocated.h
 noinst_HEADERS =
@@ -65,41 +65,41 @@ noinst_HEADERS += contrib/lax_der_privatekey_parsing.h
 noinst_HEADERS += contrib/lax_der_privatekey_parsing.c
 noinst_HEADERS += examples/random.h
 
-PRECOMPUTED_LIB = libsecp256k1_precomputed.la
+PRECOMPUTED_LIB = libsecp256k1frost_precomputed.la
 noinst_LTLIBRARIES = $(PRECOMPUTED_LIB)
-libsecp256k1_precomputed_la_SOURCES =  src/precomputed_ecmult.c src/precomputed_ecmult_gen.c
-libsecp256k1_precomputed_la_CPPFLAGS = $(SECP_INCLUDES)
+libsecp256k1frost_precomputed_la_SOURCES =  src/precomputed_ecmult.c src/precomputed_ecmult_gen.c
+libsecp256k1frost_precomputed_la_CPPFLAGS = $(SECP_INCLUDES)
 
 if USE_EXTERNAL_ASM
-COMMON_LIB = libsecp256k1_common.la
+COMMON_LIB = libsecp256k1frost_common.la
 else
 COMMON_LIB =
 endif
 noinst_LTLIBRARIES += $(COMMON_LIB)
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libsecp256k1.pc
+pkgconfig_DATA = libsecp256k1frost.pc
 
 if USE_EXTERNAL_ASM
 if USE_ASM_ARM
-libsecp256k1_common_la_SOURCES = src/asm/field_10x26_arm.s
+libsecp256k1frost_common_la_SOURCES = src/asm/field_10x26_arm.s
 endif
 endif
 
-libsecp256k1_la_SOURCES = src/secp256k1.c
-libsecp256k1_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(SECP_INCLUDES)
-libsecp256k1_la_LIBADD = $(SECP_LIBS) $(COMMON_LIB) $(PRECOMPUTED_LIB)
-libsecp256k1_la_LDFLAGS = -no-undefined -version-info $(LIB_VERSION_CURRENT):$(LIB_VERSION_REVISION):$(LIB_VERSION_AGE)
+libsecp256k1frost_la_SOURCES = src/secp256k1.c
+libsecp256k1frost_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(SECP_INCLUDES)
+libsecp256k1frost_la_LIBADD = $(SECP_LIBS) $(COMMON_LIB) $(PRECOMPUTED_LIB)
+libsecp256k1frost_la_LDFLAGS = -no-undefined -version-info $(LIB_VERSION_CURRENT):$(LIB_VERSION_REVISION):$(LIB_VERSION_AGE)
 
 if VALGRIND_ENABLED
-libsecp256k1_la_CPPFLAGS += -DVALGRIND
+libsecp256k1frost_la_CPPFLAGS += -DVALGRIND
 endif
 
 noinst_PROGRAMS =
 if USE_BENCHMARK
 noinst_PROGRAMS += bench bench_internal bench_ecmult
 bench_SOURCES = src/bench.c
-bench_LDADD = libsecp256k1.la $(SECP_LIBS) $(SECP_TEST_LIBS) $(COMMON_LIB)
+bench_LDADD = libsecp256k1frost.la $(SECP_LIBS) $(SECP_TEST_LIBS) $(COMMON_LIB)
 bench_internal_SOURCES = src/bench_internal.c
 bench_internal_LDADD = $(SECP_LIBS) $(COMMON_LIB) $(PRECOMPUTED_LIB)
 bench_internal_CPPFLAGS = $(SECP_INCLUDES)
@@ -117,7 +117,7 @@ if VALGRIND_ENABLED
 tests_CPPFLAGS += -DVALGRIND
 noinst_PROGRAMS += valgrind_ctime_test
 valgrind_ctime_test_SOURCES = src/valgrind_ctime_test.c
-valgrind_ctime_test_LDADD = libsecp256k1.la $(SECP_LIBS) $(COMMON_LIB)
+valgrind_ctime_test_LDADD = libsecp256k1frost.la $(SECP_LIBS) $(COMMON_LIB)
 endif
 if !ENABLE_COVERAGE
 tests_CPPFLAGS += -DVERIFY
@@ -144,7 +144,7 @@ if USE_EXAMPLES
 noinst_PROGRAMS += ecdsa_example
 ecdsa_example_SOURCES = examples/ecdsa.c
 ecdsa_example_CPPFLAGS = -I$(top_srcdir)/include
-ecdsa_example_LDADD = libsecp256k1.la
+ecdsa_example_LDADD = libsecp256k1frost.la
 ecdsa_example_LDFLAGS = -static
 if BUILD_WINDOWS
 ecdsa_example_LDFLAGS += -lbcrypt
@@ -154,7 +154,7 @@ if ENABLE_MODULE_ECDH
 noinst_PROGRAMS += ecdh_example
 ecdh_example_SOURCES = examples/ecdh.c
 ecdh_example_CPPFLAGS = -I$(top_srcdir)/include
-ecdh_example_LDADD = libsecp256k1.la
+ecdh_example_LDADD = libsecp256k1frost.la
 ecdh_example_LDFLAGS = -static
 if BUILD_WINDOWS
 ecdh_example_LDFLAGS += -lbcrypt
@@ -165,7 +165,7 @@ if ENABLE_MODULE_SCHNORRSIG
 noinst_PROGRAMS += schnorr_example
 schnorr_example_SOURCES = examples/schnorr.c
 schnorr_example_CPPFLAGS = -I$(top_srcdir)/include
-schnorr_example_LDADD = libsecp256k1.la
+schnorr_example_LDADD = libsecp256k1frost.la
 schnorr_example_LDFLAGS = -static
 if BUILD_WINDOWS
 schnorr_example_LDFLAGS += -lbcrypt
