@@ -457,39 +457,55 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
 }
 
 /*
- * Generate coefficients for Shamir Secret Sharing.
+ * Generate random coefficients for Shamir Secret Sharing.
  *
  *  Returns: 1: on success; 0: on failure
- *  Args:            ctx: a secp256k1 context object, initialized for verification.
- *  Out: vss_commitments: pointer to shamir_coefficients where coefficients will be stored.
- *          coefficients: pointer to shamir_coefficients where coefficients will be stored.
+ *  Out:    coefficients: pointer to shamir_coefficients where coefficients will be stored.
  *  In:  generator_index: index of participant generating coefficients.
- *                secret: secret to be used as known term of the Shamir polynomial
- *      num_participants: number of participants to the secret sharing
  *             threshold: min number of participants needed to reconstruct the secret.
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_context *ctx,
-                                                              secp256k1_frost_vss_commitments *vss_commitments,
-                                                              shamir_coefficients *coefficients,
-                                                              uint32_t generator_index, const secp256k1_scalar *secret,
-                                                              uint32_t threshold) {
+static SECP256K1_WARN_UNUSED_RESULT int generate_random_coefficients(shamir_coefficients *coefficients,
+                                                                     uint32_t generator_index,
+                                                                     uint32_t threshold) {
+    uint32_t c_idx;
+    const uint32_t num_coefficients = threshold - 1;
+
+    coefficients->index = generator_index;
+    for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
+        /* Generate random coefficients */
+        if (initialize_random_scalar(&(coefficients->coefficients[c_idx])) == 0) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/*
+ *  Commit to Verifiable Secret Shares
+ *
+ *  Args:            ctx: a secp256k1 context object, initialized for verification.
+ *  Out: vss_commitments: pointer to shamir_coefficients where coefficients will be stored.
+ *  In:     coefficients: pointer to shamir_coefficients where coefficients will be stored.
+ *                secret: secret to be used as known term of the Shamir polynomial
+ *             threshold: min number of participants needed to reconstruct the secret.
+ */
+static void vss_commit(const secp256k1_context *ctx,
+                       secp256k1_frost_vss_commitments *vss_commitments,
+                       const shamir_coefficients *coefficients,
+                       const secp256k1_scalar *secret,
+                       uint32_t threshold) {
     uint32_t c_idx;
     secp256k1_gej coefficient_cmt;
     const uint32_t num_coefficients = threshold - 1;
 
-    coefficients->index = generator_index;
-    vss_commitments->index = generator_index;
+    vss_commitments->index = coefficients->index;
 
     /* Compute the commitment of the secret term (saved as commitment[0]) */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
     serialize_point(vss_commitments->coefficient_commitments[0].data, &coefficient_cmt);
 
     for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
-        /* Generate random coefficients */
-        if (initialize_random_scalar(&(coefficients->coefficients[c_idx])) == 0) {
-            return 0;
-        }
-
         /* Compute the commitment of each random coefficient (saved as commitment[1...]) */
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
                              &coefficient_cmt,
@@ -499,8 +515,6 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
 
     /* Clean-up temporary variables */
     secp256k1_gej_clear(&coefficient_cmt);
-
-    return 1;
 }
 
 /*
@@ -587,10 +601,10 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(c
     shamir_coefficients *coefficients;
     coefficients = shamir_coefficients_create(threshold);
 
-    ret_coefficients = generate_coefficients(ctx, vss_commitments, coefficients, generator_index, secret, threshold);
+    ret_coefficients = generate_random_coefficients(coefficients, generator_index, threshold);
     if (ret_coefficients == 1) {
-        secret_share_shard(secret_key_shares, generator_index,
-                           num_participants, coefficients, secret);
+        secret_share_shard(secret_key_shares, generator_index, num_participants, coefficients, secret);
+        vss_commit(ctx, vss_commitments, coefficients, secret, threshold);
     }
 
     shamir_coefficients_destroy(coefficients);
@@ -884,7 +898,6 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
             secp256k1_scalar_set_b32(&share_value, secret_key_shares[index].value, NULL);
             secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
             serialize_point(keypairs[index].public_keys.public_key, &pubkey);
-
             memcpy(&keypairs[index].secret, &secret_key_shares[index].value, SCALAR_SIZE);
             serialize_point(keypairs[index].public_keys.group_public_key, &group_public_key);
             keypairs[index].public_keys.index = secret_key_shares[index].receiver_index;
