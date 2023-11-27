@@ -507,17 +507,17 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
  * Evaluate Shamir polynomial for each participant.
  *
  *  Returns: 1: on success; 0: on failure
- *  Out:   shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
- *  In:   coefficients: pointer to shamir_coefficients where coefficients will be stored.
- *     generator_index: index of participant generating coefficients.
- *    num_participants: number of participants to the secret sharing
- *        coefficients: pointer to shamir_coefficients.
- *              secret: secret to be used as known term of the Shamir polynomial.
+ *  Out: secret_key_shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
+ *  In:       coefficients: pointer to shamir_coefficients where coefficients will be stored.
+ *         generator_index: index of participant generating coefficients.
+ *        num_participants: number of participants to the secret sharing
+ *            coefficients: pointer to shamir_coefficients.
+ *                  secret: secret to be used as known term of the Shamir polynomial.
  */
-static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shares,
+static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *secret_key_shares,
                                        uint32_t generator_index, uint32_t num_participants,
                                        const shamir_coefficients *coefficients, const secp256k1_scalar *secret) {
-    /* For each participant, evaluate the polynomial and save in shares:
+    /* For each participant, evaluate the polynomial and save in secret_key_shares:
      * {generator_index, participant_index, f(participant_index)} */
     uint32_t index;
     secp256k1_scalar scalar_index;
@@ -539,10 +539,10 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
         /* The secret is the *constant* term in the polynomial used for secret sharing,
          * this is typical in schemes that build upon Shamir Secret Sharing. */
         secp256k1_scalar_add(&value, &value, secret);
-        secp256k1_scalar_get_b32(shares[index - 1].value, &value);
+        secp256k1_scalar_get_b32(secret_key_shares[index - 1].value, &value);
 
-        shares[index - 1].generator_index = generator_index;
-        shares[index - 1].receiver_index = index;
+        secret_key_shares[index - 1].generator_index = generator_index;
+        secret_key_shares[index - 1].receiver_index = index;
     }
 
     /* Clean-up temporary variables */
