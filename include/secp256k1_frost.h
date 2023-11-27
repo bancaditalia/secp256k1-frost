@@ -217,17 +217,17 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out:  dkg_commitment: pointer to a secp256k1_frost_vss_commitments to store the DKG first phase result.
- *                shares: pointer to an array of num_shares shares
- *  In: num_participants: number of participants and shares that will be produced.
- *             threshold: validity threshold for signatures.
- *       generator_index: index of the participant running the DKG.
- *               context: pointer to a char array containing DKG context tag.
- *        context_length: length of the char array with the DKG context.
+ *  Out:  vss_commitments: pointer to a secp256k1_frost_vss_commitments to store the DKG first phase result.
+ *                 shares: pointer to an array of num_shares shares
+ *  In:  num_participants: number of participants and shares that will be produced.
+ *              threshold: validity threshold for signatures.
+ *        generator_index: index of the participant running the DKG.
+ *                context: pointer to a char array containing DKG context tag.
+ *         context_length: length of the char array with the DKG context.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
         const secp256k1_context *ctx,
-        secp256k1_frost_vss_commitments *dkg_commitment,
+        secp256k1_frost_vss_commitments *vss_commitments,
         secp256k1_frost_keygen_secret_share *shares,
         uint32_t num_participants,
         uint32_t threshold,
@@ -296,7 +296,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
         const secp256k1_context *ctx,
-        secp256k1_frost_vss_commitments *share_commitment,
+        secp256k1_frost_vss_commitments *vss_commitments,
         secp256k1_frost_keygen_secret_share *shares,
         secp256k1_frost_keypair *keypairs,
         uint32_t num_participants,
