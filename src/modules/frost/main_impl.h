@@ -534,7 +534,7 @@ static void polynomial_evaluate(secp256k1_scalar *value,
 }
 
 /*
- * Evaluate Shamir polynomial for each participant.
+ * Shard secret for each participant by evaluating the Shamir polynomial.
  *
  *  Returns: 1: on success; 0: on failure
  *  Out: secret_key_shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
@@ -543,9 +543,9 @@ static void polynomial_evaluate(secp256k1_scalar *value,
  *            coefficients: pointer to shamir_coefficients.
  *                  secret: secret to be used as known term of the Shamir polynomial.
  */
-static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *secret_key_shares,
-                                       uint32_t generator_index, uint32_t num_participants,
-                                       const shamir_coefficients *coefficients, const secp256k1_scalar *secret) {
+static void secret_share_shard(secp256k1_frost_keygen_secret_share *secret_key_shares,
+                               uint32_t generator_index, uint32_t num_participants,
+                               const shamir_coefficients *coefficients, const secp256k1_scalar *secret) {
     /* For each participant, evaluate the polynomial and save in secret_key_shares:
      * {generator_index, participant_index, f(participant_index)} */
     uint32_t index;
@@ -589,8 +589,8 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(c
 
     ret_coefficients = generate_coefficients(ctx, vss_commitments, coefficients, generator_index, secret, threshold);
     if (ret_coefficients == 1) {
-        evaluate_shamir_polynomial(secret_key_shares, generator_index,
-                                   num_participants, coefficients, secret);
+        secret_share_shard(secret_key_shares, generator_index,
+                           num_participants, coefficients, secret);
     }
 
     shamir_coefficients_destroy(coefficients);
