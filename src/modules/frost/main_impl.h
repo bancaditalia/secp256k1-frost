@@ -657,7 +657,7 @@ static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ct
 /* TODO: to improve testability of this function, it should be deterministic. */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(const secp256k1_context *ctx,
                                                                                 secp256k1_frost_vss_commitments *vss_commitments,
-                                                                                secp256k1_frost_keygen_secret_share *shares,
+                                                                                secp256k1_frost_keygen_secret_share *secret_key_shares,
                                                                                 uint32_t num_participants,
                                                                                 uint32_t threshold,
                                                                                 uint32_t generator_index,
@@ -666,7 +666,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     secp256k1_scalar secret, r, z, challenge;
     secp256k1_gej s_pub, zkp_r;
 
-    if (ctx == NULL || vss_commitments == NULL || shares == NULL || context == NULL) {
+    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || context == NULL) {
         return 0;
     }
     if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
@@ -677,7 +677,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     if (initialize_random_scalar(&secret) == 0) {
         return 0;
     }
-    if (generate_shares(ctx, vss_commitments, shares, num_participants,
+    if (generate_shares(ctx, vss_commitments, secret_key_shares, num_participants,
                         threshold, generator_index, &secret) == 0) {
         return 0;
     }
@@ -827,7 +827,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
         const secp256k1_context *ctx,
         secp256k1_frost_vss_commitments *vss_commitments,
-        secp256k1_frost_keygen_secret_share *shares,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
         secp256k1_frost_keypair *keypairs,
         uint32_t num_participants,
         uint32_t threshold) {
@@ -836,11 +836,11 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     secp256k1_gej group_public_key;
     uint32_t generator_index, index;
 
-    if (ctx == NULL || vss_commitments == NULL || shares == NULL || keypairs == NULL) {
+    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || keypairs == NULL) {
         return 0;
     }
 
-    /* We use generator_index=0 as we are generating shares with a dealer */
+    /* We use generator_index=0 as we are generating secret_key_shares with a dealer */
     generator_index = 0;
 
     /* Parameter checking */
@@ -855,8 +855,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     }
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, &secret);
 
-    /* Generate shares */
-    if (generate_shares(ctx, vss_commitments, shares, num_participants,
+    /* Generate secret_key_shares */
+    if (generate_shares(ctx, vss_commitments, secret_key_shares, num_participants,
                         threshold, generator_index, &secret) == 0) {
         return 0;
     }
@@ -867,13 +867,13 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
         secp256k1_gej pubkey;
 
         for (index = 0; index < num_participants; index++) {
-            secp256k1_scalar_set_b32(&share_value, shares[index].value, NULL);
+            secp256k1_scalar_set_b32(&share_value, secret_key_shares[index].value, NULL);
             secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
             serialize_point(keypairs[index].public_keys.public_key, &pubkey);
 
-            memcpy(&keypairs[index].secret, &shares[index].value, SCALAR_SIZE);
+            memcpy(&keypairs[index].secret, &secret_key_shares[index].value, SCALAR_SIZE);
             serialize_point(keypairs[index].public_keys.group_public_key, &group_public_key);
-            keypairs[index].public_keys.index = shares[index].receiver_index;
+            keypairs[index].public_keys.index = secret_key_shares[index].receiver_index;
             keypairs[index].public_keys.max_participants = num_participants;
         }
 
