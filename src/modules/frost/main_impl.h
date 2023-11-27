@@ -504,6 +504,36 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
 }
 
 /*
+ * Evaluate the Shamir polynomial f(x) at a particular point x using Horner's method.
+ *
+ *  Out:         value: Scalar result of the polynomial evaluated at input x.
+ *  In:   coefficients: pointer to shamir_coefficients
+ *              secret: secret to be used as known term of the Shamir polynomial
+ *                   x:  input at which to evaluate the polynomial (treated as a Scalar)
+ */
+static void polynomial_evaluate(secp256k1_scalar *value,
+                                const shamir_coefficients *coefficients,
+                                const secp256k1_scalar *secret,
+                                uint32_t x) {
+    secp256k1_scalar scalar_x;
+    uint32_t c_idx;
+
+    secp256k1_scalar_set_int(&scalar_x, x);
+    secp256k1_scalar_set_int(value, 0);
+    for (c_idx = coefficients->num_coefficients; c_idx > 0; c_idx--) {
+        secp256k1_scalar_add(value, value, &(coefficients->coefficients[c_idx - 1]));
+        secp256k1_scalar_mul(value, value, &scalar_x);
+    }
+
+    /* The secret is the *constant* term in the polynomial used for secret sharing,
+     * this is typical in schemes that build upon Shamir Secret Sharing. */
+    secp256k1_scalar_add(value, value, secret);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&scalar_x);
+}
+
+/*
  * Evaluate Shamir polynomial for each participant.
  *
  *  Returns: 1: on success; 0: on failure
@@ -519,33 +549,18 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *secr
     /* For each participant, evaluate the polynomial and save in secret_key_shares:
      * {generator_index, participant_index, f(participant_index)} */
     uint32_t index;
-    secp256k1_scalar scalar_index;
     secp256k1_scalar value;
 
     for (index = 1; index < num_participants + 1; index++) {
-        /* Evaluate the polynomial with `secret` as the constant term
-         * and `coefficients` as the other coefficients at the point x=share_index
-         * using Horner's method */
-        uint32_t c_idx;
+        polynomial_evaluate(&value, coefficients, secret, index);
 
-        secp256k1_scalar_set_int(&scalar_index, index);
-        secp256k1_scalar_set_int(&value, 0);
-        for (c_idx = coefficients->num_coefficients; c_idx > 0; c_idx--) {
-            secp256k1_scalar_add(&value, &value, &(coefficients->coefficients[c_idx - 1]));
-            secp256k1_scalar_mul(&value, &value, &scalar_index);
-        }
-
-        /* The secret is the *constant* term in the polynomial used for secret sharing,
-         * this is typical in schemes that build upon Shamir Secret Sharing. */
-        secp256k1_scalar_add(&value, &value, secret);
+        /* Save share in secret_key_shares */
         secp256k1_scalar_get_b32(secret_key_shares[index - 1].value, &value);
-
         secret_key_shares[index - 1].generator_index = generator_index;
         secret_key_shares[index - 1].receiver_index = index;
     }
 
     /* Clean-up temporary variables */
-    secp256k1_scalar_clear(&scalar_index);
     secp256k1_scalar_clear(&value);
 }
 
