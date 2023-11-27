@@ -583,7 +583,6 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
 /*
  * Generate a challenge for DKG.
  *
- * Returns 1 on success, 0 on failure.
  *  Out:  challenge: pointer to scalar where the challenge will be stored.
  *  In:       index: participant identifier.
  *    context_nonce: tag to use during DKG
@@ -591,11 +590,11 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
  *       public_key: participant public key used for computing the challenge.
  *       commitment: commitment to a random value.
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_dkg_challenge(secp256k1_scalar *challenge,
-                                                               const uint32_t index, const unsigned char *context_nonce,
-                                                               const uint32_t nonce_length,
-                                                               const secp256k1_gej *public_key,
-                                                               const secp256k1_gej *commitment) {
+static void generate_dkg_challenge(secp256k1_scalar *challenge,
+                                   const uint32_t index, const unsigned char *context_nonce,
+                                   const uint32_t nonce_length,
+                                   const secp256k1_gej *public_key,
+                                   const secp256k1_gej *commitment) {
     uint32_t challenge_input_length;
     unsigned char *challenge_input;
     unsigned char hash_value[SHA256_SIZE];
@@ -623,7 +622,6 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_dkg_challenge(secp256k1_scalar 
     if (challenge_input != NULL) {
         free(challenge_input);
     }
-    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ctx, const secp256k1_scalar *challenge,
@@ -687,9 +685,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &zkp_r, &r);
     serialize_point(&zkp_r, dkg_commitment->zkp_r);
-    if (generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r) == 0) {
-        return 0;
-    }
+    generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r);
 
     /* z = r + secret * H(context, G^secret, G^r) */
     secp256k1_scalar_mul(&z, &secret, &challenge);
@@ -721,12 +717,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
 
     deserialize_point(&peer_zkp_r, peer_commitment->zkp_r);
     deserialize_point(&secret_commitment, peer_commitment->coefficient_commitments[0].data);
-    if (generate_dkg_challenge(&challenge, peer_commitment->index,
-                               context, context_length,
-                               &secret_commitment,
-                               &peer_zkp_r) == 0) {
-        return 0;
-    }
+    generate_dkg_challenge(&challenge, peer_commitment->index,
+                           context, context_length,
+                           &secret_commitment,
+                           &peer_zkp_r);
 
     is_valid = is_valid_zkp(ctx, &challenge, peer_commitment);
 
