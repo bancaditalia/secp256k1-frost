@@ -461,7 +461,7 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
  *
  *  Returns: 1: on success; 0: on failure
  *  Args:            ctx: a secp256k1 context object, initialized for verification.
- *  Out: dkg_commitments: pointer to shamir_coefficients where coefficients will be stored.
+ *  Out: vss_commitments: pointer to shamir_coefficients where coefficients will be stored.
  *          coefficients: pointer to shamir_coefficients where coefficients will be stored.
  *  In:  generator_index: index of participant generating coefficients.
  *                secret: secret to be used as known term of the Shamir polynomial
@@ -469,7 +469,7 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
  *             threshold: min number of participants needed to reconstruct the secret.
  */
 static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_context *ctx,
-                                                              secp256k1_frost_vss_commitments *dkg_commitments,
+                                                              secp256k1_frost_vss_commitments *vss_commitments,
                                                               shamir_coefficients *coefficients,
                                                               uint32_t generator_index, const secp256k1_scalar *secret,
                                                               uint32_t threshold) {
@@ -478,11 +478,11 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
     const uint32_t num_coefficients = threshold - 1;
 
     coefficients->index = generator_index;
-    dkg_commitments->index = generator_index;
+    vss_commitments->index = generator_index;
 
     /* Compute the commitment of the secret term (saved as commitment[0]) */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
-    serialize_point(dkg_commitments->coefficient_commitments[0].data, &coefficient_cmt);
+    serialize_point(vss_commitments->coefficient_commitments[0].data, &coefficient_cmt);
 
     for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
         /* Generate random coefficients */
@@ -494,7 +494,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
                              &coefficient_cmt,
                              &(coefficients->coefficients[c_idx]));
-        serialize_point(dkg_commitments->coefficient_commitments[c_idx + 1].data, &coefficient_cmt);
+        serialize_point(vss_commitments->coefficient_commitments[c_idx + 1].data, &coefficient_cmt);
     }
 
     /* Clean-up temporary variables */
