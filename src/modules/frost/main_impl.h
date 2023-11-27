@@ -563,12 +563,12 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *secr
  *        generator_index: participant index.
  *                 secret: Secret value to use as constant term of the polynomial
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context *ctx,
-                                                        secp256k1_frost_vss_commitments *vss_commitments,
-                                                        secp256k1_frost_keygen_secret_share *secret_key_shares,
-                                                        uint32_t num_participants, uint32_t threshold,
-                                                        uint32_t generator_index,
-                                                        const secp256k1_scalar *secret) {
+static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(const secp256k1_context *ctx,
+                                                                               secp256k1_frost_vss_commitments *vss_commitments,
+                                                                               secp256k1_frost_keygen_secret_share *secret_key_shares,
+                                                                               uint32_t num_participants, uint32_t threshold,
+                                                                               uint32_t generator_index,
+                                                                               const secp256k1_scalar *secret) {
     int ret_coefficients;
     shamir_coefficients *coefficients;
     coefficients = shamir_coefficients_create(threshold);
@@ -677,8 +677,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     if (initialize_random_scalar(&secret) == 0) {
         return 0;
     }
-    if (generate_shares(ctx, vss_commitments, secret_key_shares, num_participants,
-                        threshold, generator_index, &secret) == 0) {
+    if (generate_shares_with_random_polynomial(ctx, vss_commitments, secret_key_shares, num_participants,
+                                               threshold, generator_index, &secret) == 0) {
         return 0;
     }
 
@@ -856,8 +856,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, &secret);
 
     /* Generate secret_key_shares */
-    if (generate_shares(ctx, vss_commitments, secret_key_shares, num_participants,
-                        threshold, generator_index, &secret) == 0) {
+    if (generate_shares_with_random_polynomial(ctx, vss_commitments, secret_key_shares, num_participants,
+                                               threshold, generator_index, &secret) == 0) {
         return 0;
     }
 
