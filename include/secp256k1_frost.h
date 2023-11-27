@@ -196,29 +196,29 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
  * secp256k1_frost_keygen_dkg_begin() is performed by each participant to initialize a Pedersen
  *
  * This function assumes there is an additional layer which performs the
- * distribution of shares to their intended participants.
+ * distribution of secret_key_shares to their intended participants.
  *
- * Note that while secp256k1_frost_keygen_dkg_begin() returns Shares, these shares
+ * Note that while secp256k1_frost_keygen_dkg_begin() returns Shares, these secret_key_shares
  * should be sent *after* participants have exchanged commitments via
  * secp256k1_frost_keygen_dkg_commitment_validate(). So, the caller of
- * secp256k1_frost_keygen_dkg_begin() should store shares until after
+ * secp256k1_frost_keygen_dkg_begin() should store secret_key_shares until after
  * secp256k1_frost_keygen_dkg_commitment_validate() is complete, and then
- * exchange shares via secp256k1_frost_keygen_dkg_finalize().
+ * exchange secret_key_shares via secp256k1_frost_keygen_dkg_finalize().
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out:  dkg_commitment: pointer to a secp256k1_frost_vss_commitments to store the DKG first phase result.
- *                shares: pointer to an array of num_shares shares
- *  In: num_participants: number of participants and shares that will be produced.
- *             threshold: validity threshold for signatures.
- *       generator_index: index of the participant running the DKG.
- *               context: pointer to a char array containing DKG context tag.
- *        context_length: length of the char array with the DKG context.
+ *  Out:  vss_commitments: pointer to a secp256k1_frost_vss_commitments to store the DKG first phase result.
+ *      secret_key_shares: pointer to an array of num_shares secret_key_shares
+ *  In:  num_participants: number of participants and secret_key_shares that will be produced.
+ *              threshold: validity threshold for signatures.
+ *        generator_index: index of the participant running the DKG.
+ *                context: pointer to a char array containing DKG context tag.
+ *         context_length: length of the char array with the DKG context.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
         const secp256k1_context *ctx,
-        secp256k1_frost_vss_commitments *dkg_commitment,
-        secp256k1_frost_keygen_secret_share *shares,
+        secp256k1_frost_vss_commitments *vss_commitments,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
         uint32_t num_participants,
         uint32_t threshold,
         uint32_t generator_index,
@@ -274,7 +274,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
 /*
  * secp256k1_frost_keygen_with_dealer() allows to create keygen for each participant.
  * This function is intended to be executed by a trusted dealer that generates and
- * distributes the secret shares.
+ * distributes the secret secret_key_shares.
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
@@ -286,8 +286,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
         const secp256k1_context *ctx,
-        secp256k1_frost_vss_commitments *share_commitment,
-        secp256k1_frost_keygen_secret_share *shares,
+        secp256k1_frost_vss_commitments *vss_commitments,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
         secp256k1_frost_keypair *keypairs,
         uint32_t num_participants,
         uint32_t threshold
