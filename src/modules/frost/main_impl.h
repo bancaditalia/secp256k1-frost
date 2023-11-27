@@ -555,17 +555,17 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
  * and f(p) for each participant p
  *
  * Returns 1 on success, 0 on failure.
- *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out: vss_commitments: commitments to the Shamir polynomial coefficients.
- *                shares: array containing the polynomial computed for each participant (expected to be allocated)
- *  In: num_participants: number of shares and commitments.
- *             threshold: Signature threshold
- *       generator_index: participant index.
- *                secret: Secret value to use as constant term of the polynomial
+ *  Args:             ctx: pointer to a context object, initialized for signing.
+ *  Out:  vss_commitments: commitments to the Shamir polynomial coefficients.
+ *      secret_key_shares: array containing the polynomial computed for each participant (expected to be allocated)
+ *  In:  num_participants: number of secret_key_shares and commitments.
+ *              threshold: Signature threshold
+ *        generator_index: participant index.
+ *                 secret: Secret value to use as constant term of the polynomial
  */
 static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context *ctx,
                                                         secp256k1_frost_vss_commitments *vss_commitments,
-                                                        secp256k1_frost_keygen_secret_share *shares,
+                                                        secp256k1_frost_keygen_secret_share *secret_key_shares,
                                                         uint32_t num_participants, uint32_t threshold,
                                                         uint32_t generator_index,
                                                         const secp256k1_scalar *secret) {
@@ -575,7 +575,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
 
     ret_coefficients = generate_coefficients(ctx, vss_commitments, coefficients, generator_index, secret, threshold);
     if (ret_coefficients == 1) {
-        evaluate_shamir_polynomial(shares, generator_index,
+        evaluate_shamir_polynomial(secret_key_shares, generator_index,
                                    num_participants, coefficients, secret);
     }
 
