@@ -556,7 +556,7 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
  *
  * Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out:    coefficients: commitments to the Shamir polynomial coefficients.
+ *  Out: vss_commitments: commitments to the Shamir polynomial coefficients.
  *                shares: array containing the polynomial computed for each participant (expected to be allocated)
  *  In: num_participants: number of shares and commitments.
  *             threshold: Signature threshold
@@ -564,7 +564,7 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
  *                secret: Secret value to use as constant term of the polynomial
  */
 static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context *ctx,
-                                                        secp256k1_frost_vss_commitments *dkg_commitments,
+                                                        secp256k1_frost_vss_commitments *vss_commitments,
                                                         secp256k1_frost_keygen_secret_share *shares,
                                                         uint32_t num_participants, uint32_t threshold,
                                                         uint32_t generator_index,
@@ -573,7 +573,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
     shamir_coefficients *coefficients;
     coefficients = shamir_coefficients_create(threshold);
 
-    ret_coefficients = generate_coefficients(ctx, dkg_commitments, coefficients, generator_index, secret, threshold);
+    ret_coefficients = generate_coefficients(ctx, vss_commitments, coefficients, generator_index, secret, threshold);
     if (ret_coefficients == 1) {
         evaluate_shamir_polynomial(shares, generator_index,
                                    num_participants, coefficients, secret);
