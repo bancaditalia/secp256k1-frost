@@ -3093,7 +3093,7 @@ void test_secp256k1_frost_ietf_test_vector(void) {
     secp256k1_frost_vss_commitments *vss_commitments;
     secp256k1_frost_keygen_secret_share secret_key_shares[3];
     secp256k1_frost_keypair keypairs[3];
-    int result;
+    int result, i;
     secp256k1_scalar secret;
     shamir_coefficients *coefficients;
 
@@ -3123,6 +3123,13 @@ void test_secp256k1_frost_ietf_test_vector(void) {
     result = memcmp(ietf_frost_group_public_key, group_public_key, 33);
     CHECK(result == 0);
 
+    /* Check: Verify participant shares */
+    for(i = 0; i < IETF_FROST_MAX_PARTICIPANTS; i++) {
+        result = memcmp(&ietf_frost_participant_shares[i * IETF_FROST_PARTICIPANT_SHARE_SIZE],
+                        secret_key_shares[i].value,
+                        IETF_FROST_PARTICIPANT_SHARE_SIZE);
+        CHECK(result == 0);
+    }
 
     secp256k1_frost_vss_commitments_destroy(vss_commitments);
     secp256k1_context_destroy(sign_ctx);

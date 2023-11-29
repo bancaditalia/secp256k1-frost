@@ -55,3 +55,12 @@ print(f"static const size_t ietf_frost_message_length      = {str(len(doc['group
 print("static const unsigned char ietf_frost_share_polynomial_coefficients_0[]  = { " +
       to_c_array(doc['group_input_parameters']['share_polynomial_coefficients'][0]) + "};")
 
+print("\n")
+print("/* Section: signer_input_parameters */")
+
+print(f"#define IETF_FROST_PARTICIPANT_SHARE_SIZE {str(int(len(doc['signer_input_parameters']['participant_share'][0])/2))}")
+print("static const unsigned char ietf_frost_participant_shares[]    = { ");
+for i in doc['signer_input_parameters']['participant_share']:
+     print(f"{to_c_array(i)},")
+print("};\n")
+
