@@ -288,3 +288,10 @@ if ENABLE_MODULE_FROST
 include src/modules/frost/Makefile.am.include
 endif
 # FROST_SPECIFIC - END
+
+# FROST_SPECIFIC - START
+# TODO: use the same approach used for wycheproof
+TESTVECTORS = src/modules/frost/frost_ietf_test_vectors.h
+src/modules/frost/frost_ietf_test_vectors.h:
+	python3 tools/tests_frost_ietf_generate.py src/modules/frost/frost_ietf_test_vectors.json > $@
+# FROST_SPECIFIC - END
