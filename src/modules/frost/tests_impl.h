@@ -3096,6 +3096,11 @@ void test_secp256k1_frost_ietf_test_vector(void) {
     int result, i;
     secp256k1_scalar secret;
     shamir_coefficients *coefficients;
+    unsigned char binding_seed[32] = {0};
+    unsigned char hiding_seed[32] = {0};
+    secp256k1_frost_signature_share signature_share[3];
+    secp256k1_frost_nonce *nonces[3];
+    secp256k1_frost_nonce_commitment signing_commitments[3];
 
     /* Step 1. initialization */
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
@@ -3131,59 +3136,23 @@ void test_secp256k1_frost_ietf_test_vector(void) {
         CHECK(result == 0);
     }
 
+    /* TODO: implement vss_verify */
+
+    /* Round one: commitment; participants: (1, 3) */
+
+    /* Step 2: prepare signature commitments */
+    for (i = 0; i < IETF_FROST_MAX_PARTICIPANTS; i++) {
+        nonces[i] = secp256k1_frost_nonce_create(sign_ctx, &keypairs[i],
+                                                 binding_seed, hiding_seed);
+        memcpy(&signing_commitments[i], &(nonces[i]->commitments), sizeof(secp256k1_frost_nonce_commitment));
+    }
+
+    /* Cleanup */
     secp256k1_frost_vss_commitments_destroy(vss_commitments);
     secp256k1_context_destroy(sign_ctx);
+
+
 /*
-
-    byte_t participant_private_keys[3 * ecc_frost_ristretto255_sha512_POINTSIZE];
-    byte_t group_public_key[ecc_frost_ristretto255_sha512_PUBLICKEYSIZE];
-    byte_t vss_commitment[2 * ecc_frost_ristretto255_sha512_ELEMENTSIZE];
-    byte_t polynomial_coefficients[2 * ecc_frost_ristretto255_sha512_SCALARSIZE];
-    ecc_frost_ristretto255_sha512_trusted_dealer_keygen_with_coefficients(
-            participant_private_keys,
-            group_public_key,
-            vss_commitment,
-            polynomial_coefficients,
-            _group_secret_key,
-            _MAX_PARTICIPANTS, _MIN_PARTICIPANTS,
-            _share_polynomial_coefficients
-    );
-
-    char value_hex[65];
-
-    ecc_bin2hex(value_hex, group_public_key, 32);
-    assert_string_equal(value_hex, ecc_json_string(json, "inputs.group_public_key"));
-    ecc_bin2hex(value_hex, &participant_private_keys[0 * 64 + 32], 32);
-    assert_string_equal(value_hex, ecc_json_string(json, "inputs.participants.1.participant_share"));
-    ecc_bin2hex(value_hex, &participant_private_keys[1 * 64 + 32], 32);
-    assert_string_equal(value_hex, ecc_json_string(json, "inputs.participants.2.participant_share"));
-    ecc_bin2hex(value_hex, &participant_private_keys[2 * 64 + 32], 32);
-    assert_string_equal(value_hex, ecc_json_string(json, "inputs.participants.3.participant_share"));
-
-    // validation
-    byte_t recovered_key[ecc_frost_ristretto255_sha512_SECRETKEYSIZE];
-    ecc_frost_ristretto255_sha512_secret_share_combine(
-            recovered_key,
-            participant_private_keys, MAX_PARTICIPANTS
-    );
-    assert_memory_equal(group_secret_key, recovered_key, ecc_frost_ristretto255_sha512_SECRETKEYSIZE);
-    byte_t PK[ecc_frost_ristretto255_sha512_PUBLICKEYSIZE];
-    byte_t participant_public_keys[3 * ecc_frost_ristretto255_sha512_PUBLICKEYSIZE];
-    ecc_frost_ristretto255_sha512_derive_group_info(
-            PK,
-            participant_public_keys,
-            MAX_PARTICIPANTS,
-            MIN_PARTICIPANTS,
-            vss_commitment
-    );
-    assert_memory_equal(group_public_key, PK, ecc_frost_ristretto255_sha512_PUBLICKEYSIZE);
-    assert_int_equal(ecc_frost_ristretto255_sha512_vss_verify(&participant_private_keys[0 * ecc_frost_ristretto255_sha512_POINTSIZE], vss_commitment, MIN_PARTICIPANTS), 1);
-    assert_int_equal(ecc_frost_ristretto255_sha512_vss_verify(&participant_private_keys[1 * ecc_frost_ristretto255_sha512_POINTSIZE], vss_commitment, MIN_PARTICIPANTS), 1);
-    assert_int_equal(ecc_frost_ristretto255_sha512_vss_verify(&participant_private_keys[2 * ecc_frost_ristretto255_sha512_POINTSIZE], vss_commitment, MIN_PARTICIPANTS), 1);
-
-    // Round one: commitment
-    // (1,3)
-
     byte_t hiding_nonce_randomness_1[ecc_frost_ristretto255_sha512_SCALARSIZE];
     byte_t binding_nonce_randomness_1[ecc_frost_ristretto255_sha512_SCALARSIZE];
     ecc_hex2bin(hiding_nonce_randomness_1, ecc_json_string(json, "round_one_outputs.participants.1.hiding_nonce_randomness"), 64);

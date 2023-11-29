@@ -64,3 +64,26 @@ for i in doc['signer_input_parameters']['participant_share']:
      print(f"{to_c_array(i)},")
 print("};\n")
 
+print("\n")
+print("/* Section: round_one.signer_outputs */")
+
+signer_outputs = doc['round_one']['signer_outputs']
+len_hnr = int(len(signer_outputs['participant_1']['hiding_nonce_randomness'])/2)
+len_hn  = int(len(signer_outputs['participant_1']['hiding_nonce'])/2)
+len_bnr  = int(len(signer_outputs['participant_1']['binding_nonce_randomness'])/2)
+len_bn  = int(len(signer_outputs['participant_1']['binding_nonce'])/2)
+len_hnc  = int(len(signer_outputs['participant_1']['hiding_nonce_commitment'])/2)
+len_bnc  = int(len(signer_outputs['participant_1']['binding_nonce_commitment'])/2)
+len_bfi  = int(len(signer_outputs['participant_1']['binding_factor_input'])/2)
+len_bf  = int(len(signer_outputs['participant_1']['binding_factor'])/2)
+
+print(f"#define IETF_FROST_HIDING_NONCE_RANDOMNESS_SIZE {str(len_hnr)}")
+print(f"#define IETF_FROST_HIDING_NONCE_SIZE {str(len_hn)}")
+print(f"#define IETF_FROST_BINDING_NONCE_RANDOMNESS_SIZE {str(len_bnr)}")
+print(f"#define IETF_FROST_BINDING_NONCE_SIZE {str(len_bn)}")
+print(f"#define IETF_FROST_HIDING_NONCE_COMMITMENT_SIZE {str(len_hnc)}")
+print(f"#define IETF_FROST_BINDING_NONCE_COMMITMENT_SIZE {str(len_bnc)}")
+print(f"#define IETF_FROST_BINDING_FACTOR_INPUT_SIZE {str(len_bfi)}")
+print(f"#define IETF_FROST_BINDING_FACTOR_SIZE {str(len_bf)}")
+
+
