@@ -266,32 +266,24 @@ SECP256K1_API int secp256k1_frost_pubkey_load(secp256k1_frost_pubkey *pubkey,
     return 1;
 }
 
-SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
-                                              unsigned char *group_pubkey33,
-                                              const secp256k1_frost_pubkey *pubkey) {
+static int secp256k1_frost_pubkey_serialize(unsigned char *output33, const unsigned char *pubkey64) {
+    secp256k1_ge pk;
     size_t size;
-    int compressed;
-    secp256k1_ge pk, gpk;
 
-    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
+    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey64) == 0) {
         return 0;
     }
-    compressed = 1;
-
-    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey->public_key) == 0) {
+    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey64 + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
         return 0;
     }
-    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey->public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
-
     pk.infinity = 0;
+
     /*
      * 0 is a purposely illegal value. We will verify that
      * secp256k1_eckey_pubkey_serialize() sets it to 33
      */
     size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&pk, pubkey33, &size, compressed) == 0) {
+    if (secp256k1_eckey_pubkey_serialize(&pk, output33, &size, 1) == 0) {
         return 0;
     }
     if (size != 33) {
@@ -299,27 +291,21 @@ SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
     }
     secp256k1_ge_clear(&pk);
 
-    if (secp256k1_fe_set_b32_limit(&gpk.x, pubkey->group_public_key) == 0) {
-        return 0;
-    }
-    if (secp256k1_fe_set_b32_limit(&gpk.y, pubkey->group_public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
+    return 1;
+}
 
-    gpk.infinity = 0;
-    /*
-     * 0 is a purposely illegal value. We will verify that
-     * secp256k1_eckey_pubkey_serialize() sets it to 33
-     */
-    size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&gpk, group_pubkey33, &size, compressed) == 0) {
+SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
+                                              unsigned char *group_pubkey33,
+                                              const secp256k1_frost_pubkey *pubkey) {
+    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
         return 0;
     }
-    if (size != 33) {
+    if (secp256k1_frost_pubkey_serialize(pubkey33, pubkey->public_key) == 0) {
         return 0;
     }
-    secp256k1_ge_clear(&gpk);
-
+    if (secp256k1_frost_pubkey_serialize(group_pubkey33, pubkey->group_public_key) == 0) {
+        return 0;
+    }
     return 1;
 }
 
