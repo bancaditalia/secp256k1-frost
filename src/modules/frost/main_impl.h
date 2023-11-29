@@ -265,32 +265,24 @@ SECP256K1_API int secp256k1_frost_pubkey_load(secp256k1_frost_pubkey *pubkey,
     return 1;
 }
 
-SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
-                                              unsigned char *group_pubkey33,
-                                              const secp256k1_frost_pubkey *pubkey) {
+static int secp256k1_frost_pubkey_serialize(unsigned char *output33, const unsigned char *pubkey64) {
+    secp256k1_ge pk;
     size_t size;
-    int compressed;
-    secp256k1_ge pk, gpk;
 
-    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
+    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey64) == 0) {
         return 0;
     }
-    compressed = 1;
-
-    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey->public_key) == 0) {
+    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey64 + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
         return 0;
     }
-    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey->public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
-
     pk.infinity = 0;
+
     /*
      * 0 is a purposely illegal value. We will verify that
      * secp256k1_eckey_pubkey_serialize() sets it to 33
      */
     size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&pk, pubkey33, &size, compressed) == 0) {
+    if (secp256k1_eckey_pubkey_serialize(&pk, output33, &size, 1) == 0) {
         return 0;
     }
     if (size != 33) {
@@ -298,27 +290,21 @@ SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
     }
     secp256k1_ge_clear(&pk);
 
-    if (secp256k1_fe_set_b32_limit(&gpk.x, pubkey->group_public_key) == 0) {
-        return 0;
-    }
-    if (secp256k1_fe_set_b32_limit(&gpk.y, pubkey->group_public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
+    return 1;
+}
 
-    gpk.infinity = 0;
-    /*
-     * 0 is a purposely illegal value. We will verify that
-     * secp256k1_eckey_pubkey_serialize() sets it to 33
-     */
-    size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&gpk, group_pubkey33, &size, compressed) == 0) {
+SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
+                                              unsigned char *group_pubkey33,
+                                              const secp256k1_frost_pubkey *pubkey) {
+    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
         return 0;
     }
-    if (size != 33) {
+    if (secp256k1_frost_pubkey_serialize(pubkey33, pubkey->public_key) == 0){
         return 0;
     }
-    secp256k1_ge_clear(&gpk);
-
+    if (secp256k1_frost_pubkey_serialize(group_pubkey33, pubkey->group_public_key) == 0){
+        return 0;
+    }
     return 1;
 }
 
@@ -854,45 +840,29 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     return 1;
 }
 
-SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
+static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
         const secp256k1_context *ctx,
         secp256k1_frost_vss_commitments *vss_commitments,
         secp256k1_frost_keygen_secret_share *secret_key_shares,
         secp256k1_frost_keypair *keypairs,
         uint32_t num_participants,
-        uint32_t threshold) {
-
-    secp256k1_scalar secret;
+        uint32_t threshold,
+        const secp256k1_scalar *secret,
+        const shamir_coefficients *coefficients,
+        uint32_t generator_index) {
     secp256k1_gej group_public_key;
-    uint32_t generator_index, index;
+    uint32_t index;
 
-    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || keypairs == NULL) {
-        return 0;
-    }
+    /* Compute group public key */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, secret);
 
-    /* We use generator_index=0 as we are generating secret_key_shares with a dealer */
-    generator_index = 0;
-
-    /* Parameter checking */
-    if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
-        return 0;
-    }
-
-    /* Initialization */
+    /* Compute secret shares and commit to polynomial coefficients */
+    secret_share_shard(secret_key_shares, generator_index, num_participants, coefficients, secret);
     vss_commitments->index = generator_index;
-    if (initialize_random_scalar(&secret) == 0) {
-        return 0;
-    }
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, &secret);
+    vss_commit(ctx, vss_commitments, coefficients, secret, threshold);
 
-    /* Generate secret_key_shares */
-    if (generate_shares_with_random_polynomial(ctx, vss_commitments, secret_key_shares, num_participants,
-                                               threshold, generator_index, &secret) == 0) {
-        return 0;
-    }
-
-    /* Preparing output */
-    {
+    /* Preparing output key-pairs */
+    for (index = 0; index < num_participants; index++) {
         secp256k1_scalar share_value;
         secp256k1_gej pubkey;
 
@@ -912,10 +882,51 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     }
 
     /* Clean-up temporary variables */
-    secp256k1_scalar_clear(&secret);
     secp256k1_gej_clear(&group_public_key);
 
     return 1;
+}
+
+SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
+        const secp256k1_context *ctx,
+        secp256k1_frost_vss_commitments *vss_commitments,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
+        secp256k1_frost_keypair *keypairs,
+        uint32_t num_participants,
+        uint32_t threshold) {
+
+    secp256k1_scalar secret;
+    uint32_t generator_index;
+    shamir_coefficients *coefficients;
+    int result;
+
+    /* We use generator_index=0 as we are generating secret_key_shares with a dealer */
+    generator_index = 0;
+
+    /* Parameter checking */
+    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || keypairs == NULL) {
+        return 0;
+    }
+    if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
+        return 0;
+    }
+
+    /* Generate random as secret */
+    if (initialize_random_scalar(&secret) == 0) {
+        return 0;
+    }
+    /* Generate secret_key_shares */
+    coefficients = shamir_coefficients_create(threshold);
+    result = 0;
+    if (generate_random_coefficients(coefficients, generator_index, threshold) == 1) {
+        result = secp256k1_frost_keygen_with_dealer_core(
+                ctx, vss_commitments, secret_key_shares, keypairs,
+                num_participants, threshold, &secret, coefficients, generator_index);
+    }
+
+    /* Free allocated memory */
+    shamir_coefficients_destroy(coefficients);
+    return result;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int signing_commitment_compare(secp256k1_frost_nonce_commitment *s1,
