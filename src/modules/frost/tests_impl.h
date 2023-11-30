@@ -3093,7 +3093,7 @@ void test_secp256k1_frost_ietf_test_vector(void) {
     secp256k1_frost_vss_commitments *vss_commitments;
     secp256k1_frost_keygen_secret_share secret_key_shares[3];
     secp256k1_frost_keypair keypairs[3];
-    int result, i;
+    int result, i, j;
     secp256k1_scalar secret;
     shamir_coefficients *coefficients;
     unsigned char binding_seed[32] = {0};
@@ -3143,9 +3143,33 @@ void test_secp256k1_frost_ietf_test_vector(void) {
     /* Step 2: prepare signature commitments */
     for (i = 0; i < IETF_FROST_MAX_PARTICIPANTS; i++) {
         nonces[i] = secp256k1_frost_nonce_create(sign_ctx, &keypairs[i],
-                                                 binding_seed, hiding_seed);
+                                                 &ietf_frost_binding_nonce_randomnesses[i * IETF_FROST_BINDING_NONCE_RANDOMNESS_SIZE],
+                                                 &ietf_frost_hiding_nonce_randomnesses[i * IETF_FROST_HIDING_NONCE_RANDOMNESS_SIZE]);
+
         memcpy(&signing_commitments[i], &(nonces[i]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
+    for (j = 0; j < IETF_FROST_NUM_PARTICIPANTS; j++) {
+        i = (int) ietf_frost_participants[j] - 1;
+        result = memcmp(&ietf_frost_hiding_nonces[i * IETF_FROST_HIDING_NONCE_SIZE],
+                        nonces[i]->hiding,
+                        IETF_FROST_HIDING_NONCE_SIZE);
+        CHECK(result == 0);
+        result = memcmp(&ietf_frost_binding_nonces[i * IETF_FROST_BINDING_NONCE_SIZE],
+                        nonces[i]->binding,
+                        IETF_FROST_BINDING_NONCE_SIZE);
+        CHECK(result == 0);
+
+        result = memcmp(&ietf_frost_hiding_nonce_commitments[i * IETF_FROST_HIDING_NONCE_COMMITMENT_SIZE],
+                        nonces[i]->commitments.hiding,
+                        IETF_FROST_HIDING_NONCE_COMMITMENT_SIZE);
+        CHECK(result == 0);
+        result = memcmp(&ietf_frost_binding_nonce_commitments[i * IETF_FROST_BINDING_NONCE_COMMITMENT_SIZE],
+                        nonces[i]->commitments.binding,
+                        IETF_FROST_BINDING_NONCE_COMMITMENT_SIZE);
+        CHECK(result == 0);
+
+    }
+
 
     /* Cleanup */
     secp256k1_frost_vss_commitments_destroy(vss_commitments);
