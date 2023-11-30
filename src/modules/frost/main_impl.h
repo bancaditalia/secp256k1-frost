@@ -11,10 +11,10 @@
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
 
-static const unsigned char hash_context_prefix_h1[29] = "FROST-secp256k1-SHA256-v11rho";
-static const unsigned char hash_context_prefix_h3[31] = "FROST-secp256k1-SHA256-v11nonce";
-static const unsigned char hash_context_prefix_h4[29] = "FROST-secp256k1-SHA256-v11msg";
-static const unsigned char hash_context_prefix_h5[29] = "FROST-secp256k1-SHA256-v11com";
+static const unsigned char hash_context_prefix_h1[28] = "FROST-secp256k1-SHA256-v1rho";
+static const unsigned char hash_context_prefix_h3[30] = "FROST-secp256k1-SHA256-v1nonce";
+static const unsigned char hash_context_prefix_h4[28] = "FROST-secp256k1-SHA256-v1msg";
+static const unsigned char hash_context_prefix_h5[28] = "FROST-secp256k1-SHA256-v1com";
 
 #define SCALAR_SIZE (32U)
 #define SHA256_SIZE (32U)
@@ -184,11 +184,16 @@ static void compute_hash_h3(const unsigned char *msg, uint32_t msg_len, unsigned
     /* TODO: replace with hash-to-curve
     * H3(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.2 using L = 48,
     * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "nonce", and prime modulus equal to Order(). */
+    secp256k1_scalar scalar;
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, hash_context_prefix_h3, sizeof(hash_context_prefix_h3));
     secp256k1_sha256_write(&sha, msg, msg_len);
     secp256k1_sha256_finalize(&sha, hash_value);
+
+    /* Reduce hash to a scalar, and get back its binary representation */
+    secp256k1_scalar_set_b32(&scalar, hash_value, NULL);
+    secp256k1_scalar_get_b32(hash_value, &scalar);
 }
 
 static void compute_hash_h4(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
