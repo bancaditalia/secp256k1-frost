@@ -9,6 +9,7 @@
 
 #include "../../../include/secp256k1_frost.h"
 #include "frost_ietf_test_vectors.h"
+#include "hash_to_curve.h"
 
 void test_secp256k1_gej_eq_case_1(void) {
     secp256k1_gej a, b;
@@ -3075,6 +3076,11 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_context_destroy(test_ctx);
 }
 
+void test_hash_to_curve(void) {
+    const unsigned char msg32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
+
+    CHECK(hash_to_curve(msg32, 32) == 1);
+}
 /*
  * Check FROST against IETF test vector for FROST(secp256k1, SHA-256)
  * See Appendix of:
@@ -3347,6 +3353,8 @@ void test_secp256k1_frost_ietf_test_vector(void) {
 }
 
 void run_frost_tests(void) {
+
+    test_hash_to_curve();
 
     test_secp256k1_frost_ietf_test_vector();
 
