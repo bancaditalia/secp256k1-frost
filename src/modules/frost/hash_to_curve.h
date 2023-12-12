@@ -3,7 +3,7 @@
 
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
-#include
+
 /*
  * The function hash_to_field hashes arbitrary-length byte strings to
  * a list of one or more elements of a finite field F;
@@ -20,6 +20,30 @@
 #define IETF_RFC9380_SECP256K1_L (48U)
 #define IETF_RFC9380_SECP256K1_Z (-11)
 #define IETF_RFC9380_SHA256_B_IN_BYTES (32U)
+
+/*
+ * Integer to Octet String Primitive (I2OSP)
+ * https://datatracker.ietf.org/doc/html/rfc8017#section-4.1
+ */
+static void I2OSP(unsigned char* output, uint32_t x, uint32_t output_length){
+    int i;
+    for (i = (int) output_length - 1; i >= 0; --i) {
+        output[i] = (unsigned char) (x & 0xFF);
+        x >>= 8;
+    }
+}
+
+/*
+ * Octet String to Integer Primitive (OS2IP)
+ * https://datatracker.ietf.org/doc/html/rfc8017#section-4.2
+ */
+static void OS2IP(uint32_t *output, const unsigned char* x, uint32_t length){
+    int i;
+    for (i = 0; i < (int) length; ++i) {
+        *output = (*output) << 8 | x[i];
+    }
+}
+
 
 /*
  *  msg, a byte string.
@@ -138,6 +162,7 @@ static void clear_cofactor(/*in,out: */ secp256k1_gej* P) {
 /*
  *  hash_to_curve is a uniform encoding from byte strings to points in G.
  *  That is, the distribution of its output is statistically close to uniform in G.
+ *  https://datatracker.ietf.org/doc/html/rfc9380
  */
 static int hash_to_curve(
         /*out: */
@@ -155,7 +180,14 @@ static int hash_to_curve(
      *  5. P = clear_cofactor(R)
      *  6. return P
      */
+    unsigned char output[32];
+    uint32_t value, length;
 
+    value = 12;
+    length = 32;
+    I2OSP(output, value, length);
+
+    OS2IP(&value, output, length);
     clear_cofactor(&point);
 
     return 1;
