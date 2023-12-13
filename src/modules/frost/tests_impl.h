@@ -3078,8 +3078,9 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
 
 void test_hash_to_curve(void) {
     const unsigned char msg32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
-
-    CHECK(hash_to_curve(msg32, 32) == 1);
+    const unsigned char dst32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
+    secp256k1_gej P;
+    hash_to_curve(&P, msg32, 32, dst32, 32);
 }
 /*
  * Check FROST against IETF test vector for FROST(secp256k1, SHA-256)

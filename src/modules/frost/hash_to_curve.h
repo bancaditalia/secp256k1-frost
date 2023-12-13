@@ -22,6 +22,92 @@
 #define IETF_RFC9380_SHA256_B_IN_BYTES (32U)
 #define IETF_RFC9380_SHA256_S_IN_BYTES (64U)
 
+static const unsigned char ietf_rfc9380_m2c_a_prime[]    = {
+        0x3f, 0x87, 0x31, 0xab, 0xdd, 0x66, 0x1a, 0xdc, 0xa0, 0x8a,
+        0x55, 0x58, 0xf0, 0xf5, 0xd2, 0x72, 0xe9, 0x53, 0xd3, 0x63,
+        0xcb, 0x6f, 0x0e, 0x5d, 0x40, 0x54, 0x47, 0xc0, 0x1a, 0x44,
+        0x45, 0x33};
+#define IETF_RFC9380_M2C_B (1771U)
+
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_1_0[]    = {
+    0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 
+    0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 
+    0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8d, 0xaa, 0xaa, 
+    0xa8, 0xc7
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_1_1[]    = {
+    0x7, 0xd3, 0xd4, 0xc8, 0x0b, 0xc3, 0x21, 0xd5, 0xb9, 0xf3, 
+    0x15, 0xce, 0xa7, 0xfd, 0x44, 0xc5, 0xd5, 0x95, 0xd2, 0xfc,
+    0x0b, 0xf6, 0x3b, 0x92, 0xdf, 0xff, 0x10, 0x44, 0xf1, 0x7c, 
+    0x65, 0x81
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_1_2[]    = {
+    0x53, 0x4c, 0x32, 0x8d, 0x23, 0xf2, 0x34, 0xe6, 0xe2, 0xa4, 0x13, 
+    0xde, 0xca, 0x25, 0xca, 0xec, 0xe4, 0x50, 0x61, 0x44, 0x03, 
+    0x7c, 0x40, 0x31, 0x4e, 0xcb, 0xd0, 0xb5, 0x3d, 0x9d, 
+    0xd2, 0x62
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_1_3[]    = {
+    0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e,
+    0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38,
+    0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8d, 0xaa, 0xaa,
+    0xa8, 0x8c
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_2_0[]    = {
+    0xd3, 0x57, 0x71, 0x19, 0x3d, 0x94, 0x91, 0x8a, 0x9c, 0xa3,
+    0x4c, 0xcb, 0xb7, 0xb6, 0x40, 0xdd, 0x86, 0xcd, 0x40, 0x95,
+    0x42, 0xf8, 0x48, 0x7d, 0x9f, 0xe6, 0xb7, 0x45, 0x78, 0x1e,
+    0xb4, 0x9b
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_2_1[]    = {
+    0xed, 0xad, 0xc6, 0xf6, 0x43, 0x83, 0xdc, 0x1d, 0xf7, 0xc4,
+    0xb2, 0xd5, 0x1b, 0x54, 0x22, 0x54, 0x06, 0xd3, 0x6b, 0x64,
+    0x1f, 0x5e, 0x41, 0xbb, 0xc5, 0x2a, 0x56, 0x61, 0x2a, 0x8c,
+    0x6d, 0x14
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_3_0[]    = {
+    0x4b, 0xda, 0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f, 0x68, 0x4b,
+    0xda, 0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f, 0x68, 0x4b, 0xda,
+    0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f, 0x68, 0x4b, 0x8e, 0x38,
+    0xe2, 0x3c
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_3_1[]    = {
+    0xc7, 0x5e, 0x0c, 0x32, 0xd5, 0xcb, 0x7c, 0x0f, 0xa9, 0xd0,
+    0xa5, 0x4b, 0x12, 0xa0, 0xa6, 0xd5, 0x64, 0x7a, 0xb0, 0x46,
+    0xd6, 0x86, 0xda, 0x6f, 0xdf, 0xfc, 0x90, 0xfc, 0x20, 0x1d,
+    0x71, 0xa3
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_3_2[]    = {
+    0x29, 0xa6, 0x19, 0x46, 0x91, 0xf9, 0x1a, 0x73, 0x71, 0x52,
+    0x09, 0xef, 0x65, 0x12, 0xe5, 0x76, 0x72, 0x28, 0x30, 0xa2,
+    0x01, 0xbe, 0x20, 0x18, 0xa7, 0x65, 0xe8, 0x5a, 0x9e, 0xce,
+    0xe9, 0x31
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_3_3[]    = {
+    0x2f, 0x68, 0x4b, 0xda, 0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f,
+    0x68, 0x4b, 0xda, 0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f, 0x68,
+    0x4b, 0xda, 0x12, 0xf6, 0x84, 0xbd, 0xa1, 0x2f, 0x38, 0xe3,
+    0x8d, 0x84
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_4_0[]    = {
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff,
+    0xf9, 0x3b
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_4_1[]    = {
+    0x7a, 0x06, 0x53, 0x4b, 0xb8, 0xbd, 0xb4, 0x9f, 0xd5, 0xe9,
+    0xe6, 0x63, 0x27, 0x22, 0xc2, 0x98, 0x94, 0x67, 0xc1, 0xbf,
+    0xc8, 0xe8, 0xd9, 0x78, 0xdf, 0xb4, 0x25, 0xd2, 0x68, 0x5c,
+    0x25, 0x73
+};
+static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_4_2[]    = {
+    0x64, 0x84, 0xaa, 0x71, 0x65, 0x45, 0xca, 0x2c, 0xf3, 0xa7,
+    0x0c, 0x3f, 0xa8, 0xfe, 0x33, 0x7e, 0x0a, 0x3d, 0x21, 0x16,
+    0x2f, 0x0d, 0x62, 0x99, 0xa7, 0xbf, 0x81, 0x92, 0xbf, 0xd2,
+    0xa7, 0x6f
+};
+
 /*
  * Integer to Octet String Primitive (I2OSP)
  * https://datatracker.ietf.org/doc/html/rfc8017#section-4.1
@@ -132,7 +218,7 @@ static int expand_message_xmd(unsigned char *output,
     secp256k1_sha256_write(&sha, dst_prime, dst_length + 1);
     secp256k1_sha256_finalize(&sha, b[1]);
 
-    /* TODO: ell is included?? */
+    /* TODO: ell is included?? Maybe yes, but currently it is not */
     /* 9.  for i in (2, ..., ell):
      * 10.    b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime) */
     for (i = 2; i < ell; i++) {
@@ -233,23 +319,132 @@ static void hash_to_field(secp256k1_fe *field_elems,
     /*  return (u_0, ..., u_(count - 1)) */
 }
 
+/*
+ * FIXME: possible implementation errors
+Input: u and v, elements of F, where v != 0.
+Output: (b, y), where
+  b = True and y = sqrt(u / v) if (u / v) is square in F, and
+  b = False and y = sqrt(Z * (u / v)) otherwise.
+ * */
+static int sqrt_ratio(secp256k1_fe *y, const secp256k1_fe *u, const secp256k1_fe *v){
+    secp256k1_fe ratio, Z;
+    int is_square;
+
+    assert(!secp256k1_fe_is_zero(v));
+
+    secp256k1_fe_inv(&ratio, v);
+    secp256k1_fe_mul(&ratio, u, &ratio);
+
+    is_square = secp256k1_fe_is_square_var(&ratio);
+    if (is_square) {
+        secp256k1_fe_sqrt(y, &ratio);
+    } else {
+        secp256k1_fe_set_int(&Z, IETF_RFC9380_SECP256K1_Z);
+        secp256k1_fe_mul(y, &Z, &ratio);
+        secp256k1_fe_sqrt(y, y);
+    }
+    return is_square;
+}
+
+static int sgn0(secp256k1_fe *x) {
+    /* For secp256k1, m=1. The standard suggests to implement this function as x mod 2, which boils down to
+     * checking whether x is odd */
+    return secp256k1_fe_is_odd(x);
+}
+
+/*
+ * Straight-line implementation of the Simplified SWU method for any Weierstrass curve.
+ * The implementation follows the optimized procedure presented in Appendix F.2.2 of RFC9380:
+ * https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2
+ *
+ * Out:     Q : point on the secp256k1 curve
+ *  In:          u: field elema byte string
+ *        msg_length: length of msg
+ *               dst: a domain separation tag (of at most 255 bytes)
+ *        dst_length: actual length of dst
+ *             count: length of the uniform byte array to produce in output
+ */
+static void map_to_curve_simple_swu(
+        /*out: */ secp256k1_gej *Q,
+        /*in: */ secp256k1_fe *u) {
+    secp256k1_fe tv1, tv2, tv3, tv4, tv5, tv6, A, y1;
+    unsigned char buffer[32];
+    int is_gx1_square, e1;
+
+    /* 01. */secp256k1_fe_sqr(&tv1, u);
+    /* 02. */secp256k1_fe_mul_int(&tv1, IETF_RFC9380_SECP256K1_Z);
+    /* 03. */secp256k1_fe_sqr(&tv2, &tv1);
+    /* 04. */secp256k1_fe_add(&tv2, &tv1);
+
+    /*     */secp256k1_fe_get_b32(buffer, &tv2);
+    /*     */secp256k1_fe_set_b32_mod(&tv3, buffer);
+    /* 05. */secp256k1_fe_add_int(&tv3, 1);
+
+    /* 06. */secp256k1_fe_mul_int(&tv3, IETF_RFC9380_M2C_B);
+    if (!secp256k1_fe_is_zero(&tv2)){
+        /*     */secp256k1_fe_set_b32_mod(&tv4, buffer);
+        /* 07. */secp256k1_fe_mul_int(&tv4, -1);
+    } else {
+        /* 07. */secp256k1_fe_set_int(&tv4, IETF_RFC9380_SECP256K1_Z);
+    }
+    /*     */secp256k1_fe_set_b32_mod(&A, ietf_rfc9380_m2c_a_prime);
+    /* 08. */secp256k1_fe_mul(&tv4, &tv4, &A);
+    /* 09. */secp256k1_fe_sqr(&tv2, &tv3);
+    /* 10. */secp256k1_fe_sqr(&tv6, &tv4);
+    /* 11. */secp256k1_fe_mul(&tv5, &tv6, &A);
+    /* 12. */secp256k1_fe_add(&tv2, &tv5);
+    /* 13. */secp256k1_fe_mul(&tv2,&tv2, &tv3);
+    /* 14. */secp256k1_fe_mul(&tv6,&tv6, &tv4);
+
+    /*     */secp256k1_fe_get_b32(buffer, &tv6);
+    /*     */secp256k1_fe_set_b32_mod(&tv5, buffer);
+    /* 15. */secp256k1_fe_mul_int(&tv4, IETF_RFC9380_M2C_B);
+    /* 16. */secp256k1_fe_add(&tv2, &tv5);
+    /* 17. */secp256k1_fe_mul(&Q->x, &tv1, &tv3);
+
+    /*18. (is_gx1_square, y1) = sqrt_ratio(tv2, tv6) */
+    /* 18. */is_gx1_square = sqrt_ratio(&y1, &tv2, &tv6);
+    /* 19. */secp256k1_fe_mul(&Q->y, &tv1, u);
+    /* 20. */secp256k1_fe_mul(&Q->y, &Q->y, &y1);
+    if (is_gx1_square) {
+        /* 21. */memcpy(&Q->x, &tv3, sizeof(tv3));
+        /* 22. */memcpy(&Q->y, &y1, sizeof(tv3));
+    }
+    /* 23. */ e1 = sgn0(u) == sgn0(&Q->y);
+    if (!e1) {
+        /* 24. */secp256k1_fe_mul_int(&Q->y, -1);
+    }
+    /* 25. */secp256k1_fe_inv(&tv4, &tv4);
+    /* 25. */secp256k1_fe_mul(&Q->x, &Q->x, &tv4);
+    /* 26. return Q = (x, y)*/
+}
+
+static void iso_map(
+    /*out: */ secp256k1_gej *Q,
+    /*in: */ const secp256k1_gej *Q_prime){
+
+    /* TODO: implement here! */
+}
+
 /* The function map_to_curve calculates a point on the elliptic curve E from
  * an element of the finite field F over which E is defined.
  *
  * For secp256k1, RFC9380 requires using the Simplified Shallue-van de Woestijne-Ulas
  * (SWU) method for AB == 0 (Section 6.6.3).
  * https://datatracker.ietf.org/doc/html/rfc9380#name-simplified-swu-for-ab-0
+ *
+ * TODO: fix description
  */
 static void map_to_curve(
-        /*out: */ secp256k1_gej Q,
-        /*in: */ secp256k1_fe *u,
-        unsigned char *msg, uint32_t msg_length, uint32_t count) {
+        /*out: */ secp256k1_gej *Q,
+        /*in: */ secp256k1_fe *u) {
     /*
      *  1. (x', y') = map_to_curve_simple_swu(u)    # (x', y') is on E'
      *  2.   (x, y) = iso_map(x', y')               # (x, y) is on E
      *  3. return (x, y)
      */
-
+    map_to_curve_simple_swu(Q, u);
+    iso_map(Q, Q);
 }
 
 /*
@@ -264,41 +459,30 @@ static void map_to_curve(
  */
 static void clear_cofactor(/*in,out: */ secp256k1_gej* P) {
     /* Nothing to do for secp256k1 */
-    P = P;
+    (void*)P;
 }
-
 
 /*
  *  hash_to_curve is a uniform encoding from byte strings to points in G.
  *  That is, the distribution of its output is statistically close to uniform in G.
- *
+ * TODO:fix description
  */
-static int hash_to_curve(
-        /*out: */
+/*
+ * Input: msg, an arbitrary-length byte string.
+ * Output: P, a point in G.
+ */
+static void hash_to_curve(
+        /*out: */secp256k1_gej *P,
         /*in: */ const unsigned char *msg, uint32_t msg_length,
                  const unsigned char *dst, uint32_t dst_length) {
-
-    secp256k1_gej point;
-    /*
-     * Input: msg, an arbitrary-length byte string.
-     * Output: P, a point in G.
-     * Steps:
-     *  1. u = hash_to_field(msg, 2)
-     *  2. Q0 = map_to_curve(u[0])
-     *  3. Q1 = map_to_curve(u[1])
-     *  4. R = Q0 + Q1              # Point addition
-     *  5. P = clear_cofactor(R)
-     *  6. return P
-     */
-
     secp256k1_fe u[2];
     secp256k1_gej Q[2];
 
     hash_to_field(u, msg, msg_length, dst, dst_length, 2);
-
-    clear_cofactor(&point);
-
-    return 1;
+    map_to_curve(&Q[0], &u[0]);
+    map_to_curve(&Q[1], &u[1]);
+    secp256k1_gej_add_var(P, &Q[0], &Q[1], NULL);
+    clear_cofactor(P);
 }
 
 #endif /* LIBSECP256K1_HASH_TO_CURVE_H */
