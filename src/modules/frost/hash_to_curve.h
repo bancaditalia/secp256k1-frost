@@ -164,11 +164,10 @@ static int expand_message_xmd(unsigned char *output,
                               uint32_t len_in_bytes) {
     uint32_t ell;
     unsigned char *dst_prime, *msg_prime, *uniform_bytes;
-    unsigned char hash_value[SHA256_SIZE];
     unsigned char index2os[1];
     secp256k1_sha256 sha;
     unsigned char **b;
-    uint32_t i, j;
+    uint32_t i;
 
     /* 1.  ell = ceil(len_in_bytes / b_in_bytes) */
     ell = 1 + (len_in_bytes - 1) / IETF_RFC9380_SHA256_B_IN_BYTES;
@@ -419,11 +418,97 @@ static void map_to_curve_simple_swu(
     /* 26. return Q = (x, y)*/
 }
 
-static void iso_map(
-    /*out: */ secp256k1_gej *Q,
-    /*in: */ const secp256k1_gej *Q_prime){
+/* The 3-isogeny map from (x', y') on E' to (x, y) on E.
+ * https://datatracker.ietf.org/doc/html/rfc9380#appx-iso-secp256k1
+ *
+ *  Out:       Q: point on E
+ *  In:  Q_prime: point on E'
+ */
+static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime){
+    secp256k1_fe x_num, y_num, x_den, y_den, tmp;
+    secp256k1_fe k_13, k_12, k_11, k_10, k_21, k_20, k_33, k_32, k_31, k_30, k_42, k_41, k_40;
 
-    /* TODO: implement here! */
+    secp256k1_fe_set_b32_mod(&k_10, ietf_rfc9380_3isogeny_map_secp256k1_k_1_0);
+    secp256k1_fe_set_b32_mod(&k_11, ietf_rfc9380_3isogeny_map_secp256k1_k_1_1);
+    secp256k1_fe_set_b32_mod(&k_12, ietf_rfc9380_3isogeny_map_secp256k1_k_1_2);
+    secp256k1_fe_set_b32_mod(&k_13, ietf_rfc9380_3isogeny_map_secp256k1_k_1_3);
+    secp256k1_fe_set_b32_mod(&k_20, ietf_rfc9380_3isogeny_map_secp256k1_k_2_0);
+    secp256k1_fe_set_b32_mod(&k_21, ietf_rfc9380_3isogeny_map_secp256k1_k_2_1);
+    secp256k1_fe_set_b32_mod(&k_30, ietf_rfc9380_3isogeny_map_secp256k1_k_3_0);
+    secp256k1_fe_set_b32_mod(&k_31, ietf_rfc9380_3isogeny_map_secp256k1_k_3_1);
+    secp256k1_fe_set_b32_mod(&k_32, ietf_rfc9380_3isogeny_map_secp256k1_k_3_2);
+    secp256k1_fe_set_b32_mod(&k_33, ietf_rfc9380_3isogeny_map_secp256k1_k_3_3);
+    secp256k1_fe_set_b32_mod(&k_40, ietf_rfc9380_3isogeny_map_secp256k1_k_4_0);
+    secp256k1_fe_set_b32_mod(&k_41, ietf_rfc9380_3isogeny_map_secp256k1_k_4_1);
+    secp256k1_fe_set_b32_mod(&k_42, ietf_rfc9380_3isogeny_map_secp256k1_k_4_2);
+
+    /* x = x_num / x_den, where:
+     *   x_num = k_(1,3) * x'^3 + k_(1,2) * x'^2 + k_(1,1) * x' + k_(1,0)
+     *   x_den = x'^2 + k_(2,1) * x' + k_(2,0) */
+    /* x_num */
+    secp256k1_fe_clear(&x_num);
+    secp256k1_fe_add(&x_num, &k_10);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &k_11);
+    secp256k1_fe_add(&x_num, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &k_12);
+    secp256k1_fe_add(&x_num, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    secp256k1_fe_mul(&tmp, &tmp, &k_13);
+    secp256k1_fe_add(&x_num, &tmp);
+
+    /* x_den */
+    secp256k1_fe_clear(&x_den);
+    secp256k1_fe_add(&x_den, &k_20);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &k_21);
+    secp256k1_fe_add(&x_den, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_add(&x_den, &tmp);
+
+    /* x = x_num / x_den */
+    secp256k1_fe_inv(&x_den, &x_den);                   /* x_den = x_den^-1 */
+    secp256k1_fe_mul(&Q->x, &x_num, &x_den);
+
+    /* y = y' * y_num / y_den, where:
+     *   y_num = k_(3,3) * x'^3 + k_(3,2) * x'^2 + k_(3,1) * x' + k_(3,0)
+     *   y_den = x'^3 + k_(4,2) * x'^2 + k_(4,1) * x' + k_(4,0)  */
+
+    /* y_num */
+    secp256k1_fe_clear(&y_num);
+    secp256k1_fe_add(&y_num, &k_30);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &k_31);
+    secp256k1_fe_add(&y_num, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &k_32);
+    secp256k1_fe_add(&y_num, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    secp256k1_fe_mul(&tmp, &tmp, &k_33);
+    secp256k1_fe_add(&y_num, &tmp);
+
+    /* y_den */
+    secp256k1_fe_clear(&y_den);
+    secp256k1_fe_add(&y_den, &k_40);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &k_41);
+    secp256k1_fe_add(&y_den, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &k_42);
+    secp256k1_fe_add(&y_den, &tmp);
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    secp256k1_fe_add(&y_num, &tmp);
+
+    /* y = y' * y_num / y_den */
+    secp256k1_fe_inv(&y_den, &y_den);                   /* y_den = y_den^-1 */
+    secp256k1_fe_mul(&tmp, &y_num, &y_den);
+    secp256k1_fe_mul(&Q->y, &Q_prime->y, &tmp);
+
+    secp256k1_fe_clear(&x_num);
+    secp256k1_fe_clear(&x_den);
+    secp256k1_fe_clear(&y_num);
+    secp256k1_fe_clear(&y_den);
+    secp256k1_fe_clear(&tmp);
 }
 
 /* The function map_to_curve calculates a point on the elliptic curve E from
@@ -433,18 +518,15 @@ static void iso_map(
  * (SWU) method for AB == 0 (Section 6.6.3).
  * https://datatracker.ietf.org/doc/html/rfc9380#name-simplified-swu-for-ab-0
  *
- * TODO: fix description
+ * Out:   Q: point on secp256k1 curve
+ *  In:   u: element of the field
  */
-static void map_to_curve(
-        /*out: */ secp256k1_gej *Q,
-        /*in: */ secp256k1_fe *u) {
-    /*
-     *  1. (x', y') = map_to_curve_simple_swu(u)    # (x', y') is on E'
-     *  2.   (x, y) = iso_map(x', y')               # (x, y) is on E
-     *  3. return (x, y)
-     */
+static void map_to_curve(secp256k1_gej *Q, secp256k1_fe *u) {
+    /* (x', y') = map_to_curve_simple_swu(u)    # (x', y') is on E' */
     map_to_curve_simple_swu(Q, u);
+    /* (x, y) = iso_map(x', y')               # (x, y) is on E */
     iso_map(Q, Q);
+    /* return (x, y) */
 }
 
 /*
