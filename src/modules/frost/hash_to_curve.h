@@ -5,28 +5,21 @@
 #include "../../../include/secp256k1_frost.h"
 #include <assert.h>
 
-/* p = 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1 */
-static const unsigned char ietf_rfc9380_secp256k1_p[] = {
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff,
-	0xfc,0x2f	
-};
-
+/* p = 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+ * it is the default p parameter of the secp256k1 elliptic curve */
 #define IETF_RFC9380_SECP256K1_m (1U)
-#define IETF_RFC9380_SECP256K1_k (128U)
+/* #define IETF_RFC9380_SECP256K1_k (128U) */
 #define IETF_RFC9380_SECP256K1_L (48U)
 #define IETF_RFC9380_SECP256K1_Z (-11)
 #define IETF_RFC9380_SHA256_B_IN_BYTES (32U)
 #define IETF_RFC9380_SHA256_S_IN_BYTES (64U)
+#define IETF_RFC9380_M2C_B (1771U)
 
 static const unsigned char ietf_rfc9380_m2c_a_prime[]    = {
         0x3f, 0x87, 0x31, 0xab, 0xdd, 0x66, 0x1a, 0xdc, 0xa0, 0x8a,
         0x55, 0x58, 0xf0, 0xf5, 0xd2, 0x72, 0xe9, 0x53, 0xd3, 0x63,
         0xcb, 0x6f, 0x0e, 0x5d, 0x40, 0x54, 0x47, 0xc0, 0x1a, 0x44,
         0x45, 0x33};
-#define IETF_RFC9380_M2C_B (1771U)
-
 static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_1_0[]    = {
     0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 
     0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 0xe3, 0x8e, 0x38, 
@@ -106,9 +99,9 @@ static const unsigned char ietf_rfc9380_3isogeny_map_secp256k1_k_4_2[]    = {
     0xa7, 0x6f
 };
 
-/*
- * Integer to Octet String Primitive (I2OSP)
- * https://datatracker.ietf.org/doc/html/rfc8017#section-4.1
+/** Integer to Octet String Primitive (I2OSP)
+ *
+ *  https://datatracker.ietf.org/doc/html/rfc8017#section-4.1
  */
 static void I2OSP(unsigned char* output, uint32_t x, uint32_t output_length){
     int i;
@@ -118,9 +111,9 @@ static void I2OSP(unsigned char* output, uint32_t x, uint32_t output_length){
     }
 }
 
-/*
- * Octet String to Integer Primitive (OS2IP)
- * https://datatracker.ietf.org/doc/html/rfc8017#section-4.2
+/** Octet String to Integer Primitive (OS2IP)
+ *
+ *  https://datatracker.ietf.org/doc/html/rfc8017#section-4.2
  */
 static void OS2IP(uint32_t *output, const unsigned char* x, uint32_t length){
     int i;
@@ -129,8 +122,8 @@ static void OS2IP(uint32_t *output, const unsigned char* x, uint32_t length){
     }
 }
 
-/*
- * xor_strings - XOR two strings together to produce a third string
+/** XOR two strings together to produce a third string
+ *
  *  dest[0,..,n-1] := src_a[0,..,n-1] ^ src_b[0,..,n-1]
  */
 static void strxor(unsigned char *dest, const unsigned char *src_a, const unsigned char *src_b, size_t n) {
@@ -146,8 +139,9 @@ static void strxor(unsigned char *dest, const unsigned char *src_a, const unsign
     }
 }
 
-/* The expand_message_xmd function produces a uniformly random byte string using
- * the cryptographic hash function SHA256 that outputs 256 bits.
+/** The expand_message_xmd function produces a uniformly random byte string using
+ *  the cryptographic hash function SHA256 that outputs 256 bits.
+ *
  *  Returns 1 on success, 0 on failure.
  *  Out:      output: array of uniform bytes. It should point to an allocated array of size len_in_bytes
  *  In:          msg: a byte string
@@ -255,20 +249,19 @@ static int expand_message_xmd(unsigned char *output,
     return 1;
 }
 
-/*
- * The hash_to_field function hashes a byte string msg of arbitrary length into one
- * or more elements of a field F.
+/** The hash_to_field function hashes a byte string msg of arbitrary length into one
+ *  or more elements of a field F.
  *
- * This function works in two steps: it first hashes the input byte string to produce
- * a uniformly random byte string, and then interprets this byte string as one or more
- * elements of F.
+ *  This function works in two steps: it first hashes the input byte string to produce
+ *  a uniformly random byte string, and then interprets this byte string as one or more
+ *  elements of F.
  *
- * Out:    field_elems : pointer to an (allocated) array of field elements
- *  In:          msg: a byte string
- *        msg_length: length of msg
- *               dst: a domain separation tag (of at most 255 bytes)
- *        dst_length: actual length of dst
- *             count: length of the uniform byte array to produce in output
+ *  Out:    field_elems : pointer to an (allocated) array of field elements
+ *   In:          msg: a byte string
+ *         msg_length: length of msg
+ *                dst: a domain separation tag (of at most 255 bytes)
+ *         dst_length: actual length of dst
+ *              count: length of the uniform byte array to produce in output
  */
 static void hash_to_field(secp256k1_fe *field_elems,
                           const unsigned char *msg, uint32_t msg_length,
@@ -292,13 +285,16 @@ static void hash_to_field(secp256k1_fe *field_elems,
     for (i = 0; i < count; i++){
         /* 4.   for j in (0, ..., m - 1): */
         for (j = 0; j < IETF_RFC9380_SECP256K1_m; j++) {
+            secp256k1_fe ej;
             /* 5.     elm_offset = L * (j + i * m) */
             elm_offset = IETF_RFC9380_SECP256K1_L * (j + i * IETF_RFC9380_SECP256K1_m);
 
             /* 6.     tv = substr(uniform_bytes, elm_offset, L) */
-            /* 7.     e_j = OS2IP(tv) mod p */
             OS2IP(&e[j], &uniform_bytes[elm_offset], IETF_RFC9380_SECP256K1_L);
-            e[j] = e[j] % IETF_RFC9380_SECP256K1_p;
+            /* 7.     e_j = OS2IP(tv) mod p */
+            /* Here, e_j is an unsigned int 32, whereas p is (2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1);
+             * FIXME: the modulo operation should not be needed here. To be checked */
+            /* e[j] = e[j] % IETF_RFC9380_SECP256K1_p; */
         }
         /* 8.   u_i = (e_0, ..., e_(m - 1)) */
         /* TODO: generalize this; here, we consider the specific case of m = 1 (as it is for secp256k1) */
@@ -316,13 +312,17 @@ static void hash_to_field(secp256k1_fe *field_elems,
     /*  return (u_0, ..., u_(count - 1)) */
 }
 
-/*
+/** Implementation of the sqrt_ratio:
+ *  https://datatracker.ietf.org/doc/html/rfc9380#straightline-sswu-sqrt-ratio
+ *
  * FIXME: possible implementation errors
-Input: u and v, elements of F, where v != 0.
-Output: (b, y), where
-  b = True and y = sqrt(u / v) if (u / v) is square in F, and
-  b = False and y = sqrt(Z * (u / v)) otherwise.
- * */
+ *
+ *  Returns 1 if (u / v) is square in F; 0 otherwise
+ *  Out: y: field element: y = sqrt(u / v) if (u / v) is square in F, and
+ *                        y = sqrt(Z * (u / v)) otherwise.
+ *  In:  u: field element
+ *       v: field element (should be !=0)
+ */
 static int sqrt_ratio(secp256k1_fe *y, const secp256k1_fe *u, const secp256k1_fe *v){
     secp256k1_fe ratio, Z;
     int is_square;
@@ -349,17 +349,13 @@ static int sgn0(secp256k1_fe *x) {
     return secp256k1_fe_is_odd(x);
 }
 
-/*
- * Straight-line implementation of the Simplified SWU method for any Weierstrass curve.
- * The implementation follows the optimized procedure presented in Appendix F.2.2 of RFC9380:
- * https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2
+/** Straight-line implementation of the Simplified SWU method for any Weierstrass curve.
  *
- * Out:     Q : point on the secp256k1 curve
- *  In:          u: field elema byte string
- *        msg_length: length of msg
- *               dst: a domain separation tag (of at most 255 bytes)
- *        dst_length: actual length of dst
- *             count: length of the uniform byte array to produce in output
+ *  The implementation follows the optimized procedure presented in Appendix F.2.2 of RFC9380:
+ *  https://datatracker.ietf.org/doc/html/rfc9380#appendix-F.2
+ *
+ *  Out:  Q: point on the secp256k1 curve
+ *   In:  u: field element
  */
 static void map_to_curve_simple_swu(
         /*out: */ secp256k1_gej *Q,
@@ -416,8 +412,9 @@ static void map_to_curve_simple_swu(
     /* 26. return Q = (x, y)*/
 }
 
-/* The 3-isogeny map from (x', y') on E' to (x, y) on E.
- * https://datatracker.ietf.org/doc/html/rfc9380#appx-iso-secp256k1
+/** The 3-isogeny map from (x', y') on E' to (x, y) on E.
+ *
+ *  https://datatracker.ietf.org/doc/html/rfc9380#appx-iso-secp256k1
  *
  *  Out:       Q: point on E
  *  In:  Q_prime: point on E'
@@ -509,15 +506,15 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime){
     secp256k1_fe_clear(&tmp);
 }
 
-/* The function map_to_curve calculates a point on the elliptic curve E from
- * an element of the finite field F over which E is defined.
+/** The function map_to_curve calculates a point on the elliptic curve E from
+ *  an element of the finite field F over which E is defined.
  *
- * For secp256k1, RFC9380 requires using the Simplified Shallue-van de Woestijne-Ulas
- * (SWU) method for AB == 0 (Section 6.6.3).
- * https://datatracker.ietf.org/doc/html/rfc9380#name-simplified-swu-for-ab-0
+ *  For secp256k1, RFC9380 requires using the Simplified Shallue-van de Woestijne-Ulas
+ *  (SWU) method for AB == 0 (Section 6.6.3).
+ *  https://datatracker.ietf.org/doc/html/rfc9380#name-simplified-swu-for-ab-0
  *
- * Out:   Q: point on secp256k1 curve
- *  In:   u: element of the field
+ *  Out:   Q: point on secp256k1 curve
+ *   In:   u: element of the field
  */
 static void map_to_curve(secp256k1_gej *Q, secp256k1_fe *u) {
     /* (x', y') = map_to_curve_simple_swu(u)    # (x', y') is on E' */
@@ -527,37 +524,35 @@ static void map_to_curve(secp256k1_gej *Q, secp256k1_fe *u) {
     /* return (x, y) */
 }
 
-/*
- * clear_cofactor(P) takes as input any point on the curve
- * and produces as output a point in the prime-order (sub)group G.
+/** clear_cofactor(P) takes as input any point on the curve
+ *  and produces as output a point in the prime-order (sub)group G.
  *
- * The cofactor can always be cleared via scalar multiplication by h.
- *    clear_cofactor(P) := h_eff * P
- * For elliptic curves where h = 1, i.e., the curves with a prime number
- * of points, no operation is required.
- * For secp256k1, h_eff: 1
+ *  The cofactor can always be cleared via scalar multiplication by h.
+ *     clear_cofactor(P) := h_eff * P
+ *  For elliptic curves where h = 1, i.e., the curves with a prime number
+ *  of points, no operation is required.
+ *  For secp256k1, h_eff: 1
  */
 static void clear_cofactor(/*in,out: */ secp256k1_gej* P) {
     /* Nothing to do for secp256k1 */
     (void*)P;
 }
 
-/*
- *  hash_to_curve is a uniform encoding from byte strings to points in G.
+/** hash_to_curve is a uniform encoding from byte strings to points in G.
  *  That is, the distribution of its output is statistically close to uniform in G.
- * TODO:fix description
+ *  Ref: https://datatracker.ietf.org/doc/html/rfc9380#name-encoding-byte-strings-to-el
+ *
+ *  Out:   P: a point on the secp256k1 elliptic curve
+ *   In:        msg: a byte string
+ *       msg_length: length of msg
+ *              dst: a domain separation tag (of at most 255 bytes)
+ *       dst_length: actual length of dst
  */
-/*
- * Input: msg, an arbitrary-length byte string.
- * Output: P, a point in G.
- */
-static void hash_to_curve(
-        /*out: */secp256k1_gej *P,
-        /*in: */ const unsigned char *msg, uint32_t msg_length,
-                 const unsigned char *dst, uint32_t dst_length) {
+static void hash_to_curve(secp256k1_gej *P,
+                          const unsigned char *msg, uint32_t msg_length,
+                          const unsigned char *dst, uint32_t dst_length) {
     secp256k1_fe u[2];
     secp256k1_gej Q[2];
-
     hash_to_field(u, msg, msg_length, dst, dst_length, 2);
     map_to_curve(&Q[0], &u[0]);
     map_to_curve(&Q[1], &u[1]);
