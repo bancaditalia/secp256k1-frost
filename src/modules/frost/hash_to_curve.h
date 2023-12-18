@@ -4,17 +4,15 @@
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
 #include <assert.h>
-/*
- * The function hash_to_field hashes arbitrary-length byte strings to
- * a list of one or more elements of a finite field F;
- *
- * Inputs:
- * - msg, a byte string containing the message to hash.
- * - count, the number of elements of F to output.
- * Outputs:
- * - (u_0, ..., u_(count - 1)), a list of field elements.
- */
-#define IETF_RFC9380_SECP256K1_p (2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1)
+
+/* p = 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1 */
+static const unsigned char ietf_rfc9380_secp256k1_p[] = {
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xff, 0xff,
+	0xfc,0x2f	
+};
+
 #define IETF_RFC9380_SECP256K1_m (1U)
 #define IETF_RFC9380_SECP256K1_k (128U)
 #define IETF_RFC9380_SECP256K1_L (48U)
