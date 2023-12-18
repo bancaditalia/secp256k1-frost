@@ -299,6 +299,7 @@ static void hash_to_field(secp256k1_fe *field_elems,
         /* 8.   u_i = (e_0, ..., e_(m - 1)) */
         /* TODO: generalize this; here, we consider the specific case of m = 1 (as it is for secp256k1) */
         if (emx_result == 1) {
+            /* FIXME: unsafe type casting */
             secp256k1_fe_set_int(&field_elems[i], (int) e[0]);
         } else {
             secp256k1_fe_set_int(&field_elems[i], 0);
@@ -532,8 +533,10 @@ static void map_to_curve(secp256k1_gej *Q, secp256k1_fe *u) {
  *  For elliptic curves where h = 1, i.e., the curves with a prime number
  *  of points, no operation is required.
  *  For secp256k1, h_eff: 1
+ *
+ *  Out,In: P: point on secp256k1 curve
  */
-static void clear_cofactor(/*in,out: */ secp256k1_gej *P) {
+static void clear_cofactor(secp256k1_gej *P) {
     /* Nothing to do for secp256k1 */
     (void *) P;
 }
