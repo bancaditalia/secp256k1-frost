@@ -3087,7 +3087,6 @@ void test_hash_to_curve(void) {
  * See Appendix of:
  *  https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/
  */
-#define SCALAR_SIZE 32
 #include <string.h>
 void test_secp256k1_frost_ietf_test_vector(void) {
     unsigned char group_secret_key[32];

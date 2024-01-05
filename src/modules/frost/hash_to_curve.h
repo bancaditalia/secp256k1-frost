@@ -117,6 +117,7 @@ static void I2OSP(unsigned char *output, uint32_t x, uint32_t output_length) {
  */
 static void OS2IP(uint32_t *output, const unsigned char *x, uint32_t length) {
     int i;
+    *output = 0;
     for (i = 0; i < (int) length; ++i) {
         *output = (*output) << 8 | x[i];
     }
@@ -295,12 +296,13 @@ static void hash_to_field(secp256k1_fe *field_elems,
             /* Here, e_j is an unsigned int 32, whereas p is (2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1);
              * FIXME: the modulo operation should not be needed here. To be checked */
             /* e[j] = e[j] % IETF_RFC9380_SECP256K1_p; */
+
         }
         /* 8.   u_i = (e_0, ..., e_(m - 1)) */
         /* TODO: generalize this; here, we consider the specific case of m = 1 (as it is for secp256k1) */
         if (emx_result == 1) {
             /* FIXME: unsafe type casting */
-            secp256k1_fe_set_int(&field_elems[i], (int) e[0]);
+            secp256k1_fe_set_b32_mod(&field_elems[i], (const unsigned char *) &e[0]);
         } else {
             secp256k1_fe_set_int(&field_elems[i], 0);
         }
@@ -324,22 +326,25 @@ static void hash_to_field(secp256k1_fe *field_elems,
  *  In:  u: field element
  *       v: field element (should be !=0)
  */
-static int sqrt_ratio(secp256k1_fe *y, const secp256k1_fe *u, const secp256k1_fe *v) {
-    secp256k1_fe ratio, Z;
+static int sqrt_ratio(secp256k1_fe *y, const secp256k1_fe *u, secp256k1_fe *v) {
+    secp256k1_fe ratio, Z, tmp;
     int is_square;
 
+    secp256k1_fe_normalize(v);
     assert(!secp256k1_fe_is_zero(v));
 
     secp256k1_fe_inv(&ratio, v);
-    secp256k1_fe_mul(&ratio, u, &ratio);
+    secp256k1_fe_mul(&ratio, &ratio, u);
 
     is_square = secp256k1_fe_is_square_var(&ratio);
     if (is_square) {
         secp256k1_fe_sqrt(y, &ratio);
     } else {
-        secp256k1_fe_set_int(&Z, IETF_RFC9380_SECP256K1_Z);
+        secp256k1_fe_set_int(&Z, -1 * IETF_RFC9380_SECP256K1_Z);
+        secp256k1_fe_negate(&Z, &Z, IETF_RFC9380_SECP256K1_m);
         secp256k1_fe_mul(y, &Z, &ratio);
-        secp256k1_fe_sqrt(y, y);
+        memcpy(&tmp, y, sizeof(secp256k1_fe));
+        secp256k1_fe_sqrt(y, &tmp);
     }
     return is_square;
 }
@@ -347,6 +352,7 @@ static int sqrt_ratio(secp256k1_fe *y, const secp256k1_fe *u, const secp256k1_fe
 static int sgn0(secp256k1_fe *x) {
     /* For secp256k1, m=1. The standard suggests to implement this function as x mod 2, which boils down to
      * checking whether x is odd */
+    secp256k1_fe_normalize(x);
     return secp256k1_fe_is_odd(x);
 }
 
@@ -359,27 +365,32 @@ static int sgn0(secp256k1_fe *x) {
  *   In:  u: field element
  */
 static void map_to_curve_simple_swu(
-        /*out: */ secp256k1_gej *Q,
+        /*out: */ secp256k1_ge *Q,
         /*in: */ secp256k1_fe *u) {
-    secp256k1_fe tv1, tv2, tv3, tv4, tv5, tv6, A, y1;
-    unsigned char buffer[32];
+    secp256k1_fe tv1, tv2, tv3, tv4, tv5, tv6, A, y1, Z, B;
     int is_gx1_square, e1;
 
+    /* TODO: to be checked */
+    secp256k1_fe_set_int(&Z, -1 * IETF_RFC9380_SECP256K1_Z);
+    secp256k1_fe_negate(&Z, &Z, IETF_RFC9380_SECP256K1_m);
+    secp256k1_fe_set_int(&B, IETF_RFC9380_M2C_B);
+
     /* 01. */secp256k1_fe_sqr(&tv1, u);
-    /* 02. */secp256k1_fe_mul_int(&tv1, IETF_RFC9380_SECP256K1_Z);
+    /* 02. */secp256k1_fe_mul(&tv1, &tv1, &Z);
     /* 03. */secp256k1_fe_sqr(&tv2, &tv1);
     /* 04. */secp256k1_fe_add(&tv2, &tv1);
 
-    /*     */secp256k1_fe_get_b32(buffer, &tv2);
-    /*     */secp256k1_fe_set_b32_mod(&tv3, buffer);
+    /*     */memcpy(&tv3, &tv2, sizeof(secp256k1_fe));
     /* 05. */secp256k1_fe_add_int(&tv3, 1);
 
-    /* 06. */secp256k1_fe_mul_int(&tv3, IETF_RFC9380_M2C_B);
+    /* 06. */secp256k1_fe_mul(&tv3, &tv3, &B);
+    secp256k1_fe_normalize(&tv2);
     if (!secp256k1_fe_is_zero(&tv2)) {
-        /*     */secp256k1_fe_set_b32_mod(&tv4, buffer);
-        /* 07. */secp256k1_fe_mul_int(&tv4, -1);
+        /*     */memcpy(&tv4, &tv2, sizeof(secp256k1_fe));
+        /* 07. */secp256k1_fe_negate(&tv4, &tv4, IETF_RFC9380_SECP256K1_m);
     } else {
-        /* 07. */secp256k1_fe_set_int(&tv4, IETF_RFC9380_SECP256K1_Z);
+        /* 07. */secp256k1_fe_set_int(&tv4, -1 * IETF_RFC9380_SECP256K1_Z);
+        /*     */secp256k1_fe_negate(&tv4, &tv4, IETF_RFC9380_SECP256K1_m);
     }
     /*     */secp256k1_fe_set_b32_mod(&A, ietf_rfc9380_m2c_a_prime);
     /* 08. */secp256k1_fe_mul(&tv4, &tv4, &A);
@@ -390,9 +401,8 @@ static void map_to_curve_simple_swu(
     /* 13. */secp256k1_fe_mul(&tv2, &tv2, &tv3);
     /* 14. */secp256k1_fe_mul(&tv6, &tv6, &tv4);
 
-    /*     */secp256k1_fe_get_b32(buffer, &tv6);
-    /*     */secp256k1_fe_set_b32_mod(&tv5, buffer);
-    /* 15. */secp256k1_fe_mul_int(&tv4, IETF_RFC9380_M2C_B);
+    /*     */memcpy(&tv5, &tv6, sizeof(secp256k1_fe));
+    /* 15. */secp256k1_fe_mul(&tv4, &tv4, &B);
     /* 16. */secp256k1_fe_add(&tv2, &tv5);
     /* 17. */secp256k1_fe_mul(&Q->x, &tv1, &tv3);
 
@@ -401,12 +411,12 @@ static void map_to_curve_simple_swu(
     /* 19. */secp256k1_fe_mul(&Q->y, &tv1, u);
     /* 20. */secp256k1_fe_mul(&Q->y, &Q->y, &y1);
     if (is_gx1_square) {
-        /* 21. */memcpy(&Q->x, &tv3, sizeof(tv3));
-        /* 22. */memcpy(&Q->y, &y1, sizeof(tv3));
+        /* 21. */memcpy(&Q->x, &tv3, sizeof(secp256k1_fe));
+        /* 22. */memcpy(&Q->y, &y1, sizeof(secp256k1_fe));
     }
     /* 23. */ e1 = sgn0(u) == sgn0(&Q->y);
     if (!e1) {
-        /* 24. */secp256k1_fe_mul_int(&Q->y, -1);
+        /* 24. */secp256k1_fe_negate(&Q->y, &Q->y, IETF_RFC9380_SECP256K1_m);
     }
     /* 25. */secp256k1_fe_inv(&tv4, &tv4);
     /* 25. */secp256k1_fe_mul(&Q->x, &Q->x, &tv4);
@@ -420,9 +430,11 @@ static void map_to_curve_simple_swu(
  *  Out:       Q: point on E
  *  In:  Q_prime: point on E'
  */
-static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
-    secp256k1_fe x_num, y_num, x_den, y_den, tmp;
+static void iso_map(secp256k1_ge *Q, const secp256k1_ge *Q_prime) {
+    secp256k1_fe x_num, y_num, x_den, y_den, tmp, tmp_x_prime;
     secp256k1_fe k_13, k_12, k_11, k_10, k_21, k_20, k_33, k_32, k_31, k_30, k_42, k_41, k_40;
+
+    secp256k1_ge_clear(Q);
 
     secp256k1_fe_set_b32_mod(&k_10, ietf_rfc9380_3isogeny_map_secp256k1_k_1_0);
     secp256k1_fe_set_b32_mod(&k_11, ietf_rfc9380_3isogeny_map_secp256k1_k_1_1);
@@ -446,11 +458,13 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
     secp256k1_fe_add(&x_num, &k_10);
     secp256k1_fe_mul(&tmp, &Q_prime->x, &k_11);
     secp256k1_fe_add(&x_num, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
     secp256k1_fe_mul(&tmp, &tmp, &k_12);
     secp256k1_fe_add(&x_num, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
-    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);         /* x'^3*/
     secp256k1_fe_mul(&tmp, &tmp, &k_13);
     secp256k1_fe_add(&x_num, &tmp);
 
@@ -459,7 +473,8 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
     secp256k1_fe_add(&x_den, &k_20);
     secp256k1_fe_mul(&tmp, &Q_prime->x, &k_21);
     secp256k1_fe_add(&x_den, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
     secp256k1_fe_add(&x_den, &tmp);
 
     /* x = x_num / x_den */
@@ -475,11 +490,13 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
     secp256k1_fe_add(&y_num, &k_30);
     secp256k1_fe_mul(&tmp, &Q_prime->x, &k_31);
     secp256k1_fe_add(&y_num, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
     secp256k1_fe_mul(&tmp, &tmp, &k_32);
     secp256k1_fe_add(&y_num, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
-    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);         /* x'^3*/
     secp256k1_fe_mul(&tmp, &tmp, &k_33);
     secp256k1_fe_add(&y_num, &tmp);
 
@@ -488,11 +505,13 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
     secp256k1_fe_add(&y_den, &k_40);
     secp256k1_fe_mul(&tmp, &Q_prime->x, &k_41);
     secp256k1_fe_add(&y_den, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
     secp256k1_fe_mul(&tmp, &tmp, &k_42);
     secp256k1_fe_add(&y_den, &tmp);
-    secp256k1_fe_mul(&tmp, &Q_prime->x, &Q_prime->x); /* x'^2*/
-    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);        /* x'^3*/
+    memcpy(&tmp_x_prime, &Q_prime->x, sizeof(secp256k1_fe));
+    secp256k1_fe_mul(&tmp, &Q_prime->x, &tmp_x_prime); /* x'^2*/
+    secp256k1_fe_mul(&tmp, &tmp, &Q_prime->x);         /* x'^3*/
     secp256k1_fe_add(&y_num, &tmp);
 
     /* y = y' * y_num / y_den */
@@ -505,6 +524,7 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
     secp256k1_fe_clear(&y_num);
     secp256k1_fe_clear(&y_den);
     secp256k1_fe_clear(&tmp);
+    secp256k1_fe_clear(&tmp_x_prime);
 }
 
 /** The function map_to_curve calculates a point on the elliptic curve E from
@@ -518,11 +538,15 @@ static void iso_map(secp256k1_gej *Q, const secp256k1_gej *Q_prime) {
  *   In:   u: element of the field
  */
 static void map_to_curve(secp256k1_gej *Q, secp256k1_fe *u) {
+    secp256k1_ge Q_prime, Q_ge;
     /* (x', y') = map_to_curve_simple_swu(u)    # (x', y') is on E' */
-    map_to_curve_simple_swu(Q, u);
+    map_to_curve_simple_swu(&Q_prime, u);
     /* (x, y) = iso_map(x', y')               # (x, y) is on E */
-    iso_map(Q, Q);
+    iso_map(&Q_ge, &Q_prime);
     /* return (x, y) */
+    secp256k1_gej_set_ge(Q, &Q_ge);
+    secp256k1_ge_clear(&Q_prime);
+    secp256k1_ge_clear(&Q_ge);
 }
 
 /** clear_cofactor(P) takes as input any point on the curve
