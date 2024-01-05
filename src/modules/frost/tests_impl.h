@@ -9,6 +9,7 @@
 
 #include "../../../include/secp256k1_frost.h"
 #include "frost_ietf_test_vectors.h"
+#include "ietf_h2c_test_vectors.h"
 #include "hash_to_curve.h"
 
 void test_secp256k1_gej_eq_case_1(void) {
@@ -3079,8 +3080,40 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
 void test_hash_to_curve(void) {
     const unsigned char msg32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
     const unsigned char dst32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
+    int i;
     secp256k1_gej P;
+
     hash_to_curve(&P, msg32, 32, dst32, 32);
+
+    for (i = 0; i < IETF_RFC9380_TEST_VECTORS; i++) {
+        secp256k1_fe u[2];
+        secp256k1_gej Q[2];
+        const ietf_rfc9380_testvector *tv;
+        unsigned char buffer[32];
+        int result;
+        tv = &ietf_rfc9380_testvectors[i];
+
+        hash_to_field(u,
+                      &ietf_rfc9380_messages[tv->msg_offset], tv->msg_len,
+                      ietf_rfc9380_dst,
+                      IETF_RFC9380_DST_LEN, 2);
+
+        secp256k1_fe_normalize_var(&u[0]);
+        secp256k1_fe_get_b32(buffer, &u[0]);
+        result = memcmp(&ietf_rfc9380_u0s[i * IETF_RFC9380_u0_SIZE],buffer, IETF_RFC9380_u0_SIZE);
+        CHECK(result == 0);
+        secp256k1_fe_normalize_var(&u[1]);
+        secp256k1_fe_get_b32(buffer, &u[1]);
+        result = memcmp(&ietf_rfc9380_u1s[i * IETF_RFC9380_u0_SIZE], buffer, IETF_RFC9380_u0_SIZE);
+        CHECK(result == 0);
+
+        map_to_curve(&Q[0], &u[0]);
+        map_to_curve(&Q[1], &u[1]);
+        secp256k1_gej_add_var(&P, &Q[0], &Q[1], NULL);
+        clear_cofactor(&P);
+
+    }
+
 }
 /*
  * Check FROST against IETF test vector for FROST(secp256k1, SHA-256)
