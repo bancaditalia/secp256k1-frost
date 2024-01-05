@@ -569,6 +569,9 @@ static void clear_cofactor(secp256k1_gej *P) {
  *  That is, the distribution of its output is statistically close to uniform in G.
  *  Ref: https://datatracker.ietf.org/doc/html/rfc9380#name-encoding-byte-strings-to-el
  *
+ *  This corresponds to secp256k1_XMD:SHA-256_SSWU_RO_.
+ *   https://datatracker.ietf.org/doc/html/rfc9380#section-8.7
+ *
  *  Out:   P: a point on the secp256k1 elliptic curve
  *   In:        msg: a byte string
  *       msg_length: length of msg
@@ -584,6 +587,28 @@ static void hash_to_curve(secp256k1_gej *P,
     map_to_curve(&Q[0], &u[0]);
     map_to_curve(&Q[1], &u[1]);
     secp256k1_gej_add_var(P, &Q[0], &Q[1], NULL);
+    clear_cofactor(P);
+}
+
+/** encode_to_curve is a nonuniform encoding from byte strings to points in G.
+ *  That is, the distribution of its output is not uniformly random in G
+ *  Ref: https://datatracker.ietf.org/doc/html/rfc9380#name-encoding-byte-strings-to-el
+ *
+ *  This corresponds to secp256k1_XMD:SHA-256_SSWU_NU_.
+ *   https://datatracker.ietf.org/doc/html/rfc9380#section-8.7
+ *
+ *  Out:   P: a point on the secp256k1 elliptic curve
+ *   In:        msg: a byte string
+ *       msg_length: length of msg
+ *              dst: a domain separation tag (of at most 255 bytes)
+ *       dst_length: actual length of dst
+ */
+static void encode_to_curve(secp256k1_gej *P,
+                          const unsigned char *msg, uint32_t msg_length,
+                          const unsigned char *dst, uint32_t dst_length) {
+    secp256k1_fe u;
+    hash_to_field(&u, msg, msg_length, dst, dst_length, 1);
+    map_to_curve(P, &u);
     clear_cofactor(P);
 }
 
