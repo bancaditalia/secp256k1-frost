@@ -7,8 +7,6 @@ Generate a C file with FROST IETF test vectors.
 '''
 
 import json
-import hashlib
-import urllib.request
 import sys
 
 filename_input = sys.argv[1]
