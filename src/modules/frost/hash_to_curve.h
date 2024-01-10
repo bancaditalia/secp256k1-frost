@@ -162,6 +162,9 @@ static int expand_message_xmd(unsigned char *output,
     unsigned char **b;
     uint32_t i;
 
+    /* TODO: split into 3 methods: derive dst_prime; derive msg_prime; compute uniform_bytes
+     * So to test the 3 steps independently */
+
     /* 1.  ell = ceil(len_in_bytes / b_in_bytes) */
     ell = 1 + (len_in_bytes - 1) / IETF_RFC9380_SHA256_B_IN_BYTES;
     /* 2.  ABORT if ell > 255 or len_in_bytes > 65535 or len(DST) > 255 */

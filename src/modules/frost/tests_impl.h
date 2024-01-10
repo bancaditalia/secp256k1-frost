@@ -10,6 +10,7 @@
 #include "../../../include/secp256k1_frost.h"
 #include "frost_ietf_test_vectors.h"
 #include "ietf_h2c_test_vectors.h"
+#include "ietf_h2c_expander_test_vectors.h"
 #include "hash_to_curve.h"
 
 void test_secp256k1_gej_eq_case_1(void) {
@@ -3077,6 +3078,29 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_context_destroy(test_ctx);
 }
 
+void test_hash_to_curve_expander(void) {
+    int i;
+    for (i = 0; i < IETF_RFC9380_EXP_TEST_VECTORS; i++) {
+        int result;
+        uint32_t len_in_bytes;
+        unsigned char *uniform_bytes;
+        const ietf_rfc9380_expander_testvector *tv;
+
+        tv = &ietf_rfc9380_expander_testvectors[i];
+        len_in_bytes = tv->len_in_bytes;
+        uniform_bytes = (unsigned char *) checked_malloc(&default_error_callback,
+                                                         len_in_bytes);
+        result = expand_message_xmd(uniform_bytes, &ietf_rfc9380_exp_msgs[tv->msg_offset], tv->msg_len,
+                                    ietf_rfc9380_exp_dst, IETF_RFC9380_EXP_DST_LEN,
+                                    len_in_bytes);
+        /* expand_message_xmd outputs 1 on success */
+        CHECK(result == 1);
+        result = memcmp(uniform_bytes, &ietf_rfc9380_exp_uniform_bytes[tv->uniform_bytes_offset], len_in_bytes);
+        /* check if they are equal */
+        CHECK(result == 0);
+    }
+}
+
 void test_hash_to_curve(void) {
     const unsigned char msg32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
     const unsigned char dst32[32] = "zsdW0tL5jv9d1SZsIOUiDIIwWX7n6rgg";
@@ -3387,6 +3411,7 @@ void test_secp256k1_frost_ietf_test_vector(void) {
 
 void run_frost_tests(void) {
 
+    test_hash_to_curve_expander();
     test_hash_to_curve();
 
     test_secp256k1_frost_ietf_test_vector();
