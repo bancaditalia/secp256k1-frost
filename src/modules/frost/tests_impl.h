@@ -3082,16 +3082,18 @@ void test_hash_to_curve_expander(void) {
     int i;
     for (i = 0; i < IETF_RFC9380_EXP_TEST_VECTORS; i++) {
         int result;
-        uint32_t len_in_bytes;
-        unsigned char *uniform_bytes, *dst_prime, *msg_prime;
+        uint32_t len_in_bytes, dst_length;
+        unsigned char *dst_, *uniform_bytes, *dst_prime, *msg_prime;
         const ietf_rfc9380_expander_testvector *tv;
 
         tv = &ietf_rfc9380_expander_testvectors[i];
         len_in_bytes = tv->len_in_bytes;
+        dst_length = IETF_RFC9380_EXP_DST_LEN;
 
         /* Individually test dst expansion */
-        dst_prime = (unsigned char *) checked_malloc(&default_error_callback, IETF_RFC9380_EXP_DST_LEN + 1);
-        compute_dst_prime(dst_prime, ietf_rfc9380_exp_dst, IETF_RFC9380_EXP_DST_LEN);
+        dst_ = reduce_dst_if_needed_xmd(ietf_rfc9380_exp_dst, &dst_length);
+        dst_prime = (unsigned char *) checked_malloc(&default_error_callback, dst_length + 1);
+        compute_dst_prime(dst_prime, dst_, dst_length);
         result = memcmp(dst_prime, ietf_rfc9380_exp_dst_prime, IETF_RFC9380_EXP_DST_PRIME_LEN);
         /* check if they are equal */
         CHECK(result == 0);
@@ -3100,9 +3102,9 @@ void test_hash_to_curve_expander(void) {
         msg_prime = (unsigned char *) checked_malloc(&default_error_callback,
                                                      IETF_RFC9380_SHA256_S_IN_BYTES
                                                      + tv->msg_len + 2
-                                                     + 1 + IETF_RFC9380_EXP_DST_LEN + 1);
+                                                     + 1 + dst_length + 1);
         compute_msg_prime(msg_prime, &ietf_rfc9380_exp_msgs[tv->msg_offset], tv->msg_len,
-                          dst_prime, IETF_RFC9380_EXP_DST_LEN, len_in_bytes);
+                          dst_prime, dst_length, len_in_bytes);
         result = memcmp(msg_prime, &ietf_rfc9380_exp_msg_primes[tv->msg_prime_offset], tv->msg_prime_len);
         /* check if they are equal */
         CHECK(result == 0);

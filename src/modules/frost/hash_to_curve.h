@@ -15,6 +15,8 @@
 #define IETF_RFC9380_SHA256_S_IN_BYTES (64U)
 #define IETF_RFC9380_M2C_B (1771U)
 
+static const unsigned char long_dst_prefix[17] = "H2C-OVERSIZE-DST-";
+
 static const unsigned char ietf_rfc9380_m2c_a_prime[] = {
         0x3f, 0x87, 0x31, 0xab, 0xdd, 0x66, 0x1a, 0xdc, 0xa0, 0x8a,
         0x55, 0x58, 0xf0, 0xf5, 0xd2, 0x72, 0xe9, 0x53, 0xd3, 0x63,
@@ -163,6 +165,25 @@ static void compute_msg_prime(unsigned char *msg_prime, const unsigned char *msg
     memcpy(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2 + 1], dst_prime, dst_length + 1);
 }
 
+static unsigned char * reduce_dst_if_needed_xmd(const unsigned char *dst, uint32_t *dst_length){
+    int reduced;
+    secp256k1_sha256 sha;
+    unsigned char *dest_dst;
+    reduced = *dst_length > 255;
+    if (reduced) {
+        dest_dst = (unsigned char *) checked_malloc(&default_error_callback, SHA256_SIZE);
+        secp256k1_sha256_initialize(&sha);
+        secp256k1_sha256_write(&sha, long_dst_prefix, 17);
+        secp256k1_sha256_write(&sha, dst, *dst_length);
+        secp256k1_sha256_finalize(&sha, &dest_dst[0]);
+        *dst_length = SHA256_SIZE;
+    } else {
+        dest_dst = (unsigned char *) checked_malloc(&default_error_callback, *dst_length);
+        memcpy(dest_dst, dst, *dst_length);
+    }
+    return dest_dst;
+}
+
 /** The expand_message_xmd function produces a uniformly random byte string using
  *  the cryptographic hash function SHA256 that outputs 256 bits.
  *
@@ -179,11 +200,13 @@ static int expand_message_xmd(unsigned char *output,
                               const unsigned char *dst, uint32_t dst_length,
                               uint32_t len_in_bytes) {
     uint32_t ell;
-    unsigned char *dst_prime, *msg_prime, *uniform_bytes;
+    unsigned char *dst_, *dst_prime, *msg_prime, *uniform_bytes;
     unsigned char index2os[1];
     secp256k1_sha256 sha;
     unsigned char **b;
     uint32_t i;
+
+    dst_ = reduce_dst_if_needed_xmd(dst, &dst_length);
 
     /* 1.  ell = ceil(len_in_bytes / b_in_bytes) */
     ell = 1 + (len_in_bytes - 1) / IETF_RFC9380_SHA256_B_IN_BYTES;
@@ -195,7 +218,7 @@ static int expand_message_xmd(unsigned char *output,
 
     /* 3.  DST_prime = DST || I2OSP(len(DST), 1) */
     dst_prime = (unsigned char *) checked_malloc(&default_error_callback, dst_length + 1);
-    compute_dst_prime(dst_prime, dst, dst_length);
+    compute_dst_prime(dst_prime, dst_, dst_length);
 
     /* msg_prime_length = s_in_bytes + msg_length + 2 + 1 + dst_prime_length */
     msg_prime = (unsigned char *) checked_malloc(&default_error_callback,
@@ -246,6 +269,7 @@ static int expand_message_xmd(unsigned char *output,
     memcpy(output, uniform_bytes, len_in_bytes);
 
     /* cleaning out dynamically allocated memory */
+    free(dst_);
     if (dst_prime != NULL) {
         free(dst_prime);
     }
