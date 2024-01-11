@@ -140,6 +140,29 @@ static void strxor(unsigned char *dest, const unsigned char *src_a, const unsign
     }
 }
 
+static void compute_dst_prime(unsigned char *dst_prime, const unsigned char *dst, uint32_t dst_length) {
+    /* 3.  DST_prime = DST || I2OSP(len(DST), 1) */
+    memcpy(&dst_prime[0], dst, dst_length);
+    I2OSP(&dst_prime[dst_length], dst_length, 1);
+}
+
+static void compute_msg_prime(unsigned char *msg_prime, const unsigned char *msg, uint32_t msg_length,
+                               const unsigned char *dst_prime, uint32_t dst_length,
+                               uint32_t len_in_bytes) {/* 4.  Z_pad = I2OSP(0, s_in_bytes) */
+
+    /* 4.  Z_pad = I2OSP(0, s_in_bytes) */
+    I2OSP(&msg_prime[0], 0, IETF_RFC9380_SHA256_S_IN_BYTES);
+
+    /* Adding msg to msg_prime (Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime) */
+    memcpy(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES], msg, msg_length);
+
+    /* 5.  l_i_b_str = I2OSP(len_in_bytes, 2) */
+    /* 6.  msg_prime = Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime */
+    I2OSP(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length], len_in_bytes, 2);
+    I2OSP(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2], 0, 1);
+    memcpy(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2 + 1], dst_prime, dst_length + 1);
+}
+
 /** The expand_message_xmd function produces a uniformly random byte string using
  *  the cryptographic hash function SHA256 that outputs 256 bits.
  *
@@ -162,9 +185,6 @@ static int expand_message_xmd(unsigned char *output,
     unsigned char **b;
     uint32_t i;
 
-    /* TODO: split into 3 methods: derive dst_prime; derive msg_prime; compute uniform_bytes
-     * So to test the 3 steps independently */
-
     /* 1.  ell = ceil(len_in_bytes / b_in_bytes) */
     ell = 1 + (len_in_bytes - 1) / IETF_RFC9380_SHA256_B_IN_BYTES;
     /* 2.  ABORT if ell > 255 or len_in_bytes > 65535 or len(DST) > 255 */
@@ -175,28 +195,19 @@ static int expand_message_xmd(unsigned char *output,
 
     /* 3.  DST_prime = DST || I2OSP(len(DST), 1) */
     dst_prime = (unsigned char *) checked_malloc(&default_error_callback, dst_length + 1);
-    memcpy(&dst_prime[0], dst, dst_length);
-    I2OSP(&dst_prime[dst_length], dst_length, 1);
+    compute_dst_prime(dst_prime, dst, dst_length);
 
     /* msg_prime_length = s_in_bytes + msg_length + 2 + 1 + dst_prime_length */
     msg_prime = (unsigned char *) checked_malloc(&default_error_callback,
                                                  IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2 + 1 + dst_length + 1);
-
     /* 4.  Z_pad = I2OSP(0, s_in_bytes) */
-    I2OSP(&msg_prime[0], 0, IETF_RFC9380_SHA256_S_IN_BYTES);
-
-    /* Adding msg to msg_prime (Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime) */
-    memcpy(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES], msg, msg_length);
-
     /* 5.  l_i_b_str = I2OSP(len_in_bytes, 2) */
     /* 6.  msg_prime = Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime */
-    I2OSP(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length], len_in_bytes, 2);
-    I2OSP(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2], 0, 1);
-    memcpy(&msg_prime[IETF_RFC9380_SHA256_S_IN_BYTES + msg_length + 2 + 1], dst_prime, dst_length + 1);
+    compute_msg_prime(msg_prime, msg, msg_length, dst_prime, dst_length, len_in_bytes);
 
     /* Allocating b_0, ...,  = H(msg_prime)  */
-    b = malloc(ell * sizeof b);
-    for (i = 0; i < ell; i++) {
+    b = malloc((ell + 1) * sizeof b);
+    for (i = 0; i < ell + 1; i++) {
         b[i] = malloc(SHA256_SIZE * sizeof *b);
     }
 
@@ -213,10 +224,9 @@ static int expand_message_xmd(unsigned char *output,
     secp256k1_sha256_write(&sha, dst_prime, dst_length + 1);
     secp256k1_sha256_finalize(&sha, b[1]);
 
-    /* TODO: ell is included?? Maybe yes, but currently it is not */
     /* 9.  for i in (2, ..., ell):
      * 10.    b_i = H(strxor(b_0, b_(i - 1)) || I2OSP(i, 1) || DST_prime) */
-    for (i = 2; i < ell; i++) {
+    for (i = 2; i < ell + 1; i++) {
         secp256k1_sha256_initialize(&sha);
         strxor(b[i], b[0], b[i - 1], SHA256_SIZE);
         secp256k1_sha256_write(&sha, b[i], SHA256_SIZE);
@@ -227,8 +237,8 @@ static int expand_message_xmd(unsigned char *output,
     }
 
     /* 11. uniform_bytes = b_1 || ... || b_ell */
-    uniform_bytes = (unsigned char *) checked_malloc(&default_error_callback, (ell - 1) * SHA256_SIZE);
-    for (i = 1; i < ell; i++) {
+    uniform_bytes = (unsigned char *) checked_malloc(&default_error_callback, ell * SHA256_SIZE);
+    for (i = 1; i < ell + 1; i++) {
         memcpy(&uniform_bytes[(i - 1) * SHA256_SIZE], b[i], SHA256_SIZE);
     }
 

@@ -54,11 +54,13 @@ msgs = ""
 msg_primes = ""
 uniform_bytes = ""
 out = ""
+dst_prime_len = 0
 
 for i in range(num_tests):
     test = doc['tests'][i]
     if dst_prime == "":
         dst_prime = to_c_array(test['DST_prime'])
+        dst_prime_len = int(len(test['DST_prime']) / 2)
     len_in_bytes = int(test['len_in_bytes'], 16)
     msg_len = len(test['msg'])
     msg_offset = offset_msg_running
@@ -79,7 +81,7 @@ for i in range(num_tests):
     offset_msg_prime_running += msg_prime_len
     offset_uniform_bytes_running += uniform_bytes_len
 
-print(f"#define IETF_RFC9380_EXP_DST_PRIME_LEN {int(len(dst_prime) / 2)}")
+print(f"#define IETF_RFC9380_EXP_DST_PRIME_LEN {dst_prime_len}")
 print(f"static const unsigned char ietf_rfc9380_exp_dst_prime[IETF_RFC9380_EXP_DST_PRIME_LEN] = {{{dst_prime}}};")
 print("static const unsigned char ietf_rfc9380_exp_msgs[]    = { " + msgs + "};\n")
 print("static const unsigned char ietf_rfc9380_exp_msg_primes[]    = { " + msg_primes + "};\n")

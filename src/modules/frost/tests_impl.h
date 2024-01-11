@@ -3083,11 +3083,33 @@ void test_hash_to_curve_expander(void) {
     for (i = 0; i < IETF_RFC9380_EXP_TEST_VECTORS; i++) {
         int result;
         uint32_t len_in_bytes;
-        unsigned char *uniform_bytes;
+        unsigned char *uniform_bytes, *dst_prime, *msg_prime;
         const ietf_rfc9380_expander_testvector *tv;
 
         tv = &ietf_rfc9380_expander_testvectors[i];
         len_in_bytes = tv->len_in_bytes;
+
+        /* Individually test dst expansion */
+        dst_prime = (unsigned char *) checked_malloc(&default_error_callback, IETF_RFC9380_EXP_DST_LEN + 1);
+        compute_dst_prime(dst_prime, ietf_rfc9380_exp_dst, IETF_RFC9380_EXP_DST_LEN);
+        result = memcmp(dst_prime, ietf_rfc9380_exp_dst_prime, IETF_RFC9380_EXP_DST_PRIME_LEN);
+        /* check if they are equal */
+        CHECK(result == 0);
+
+        /* Individually test msg expansion */
+        msg_prime = (unsigned char *) checked_malloc(&default_error_callback,
+                                                     IETF_RFC9380_SHA256_S_IN_BYTES
+                                                     + tv->msg_len + 2
+                                                     + 1 + IETF_RFC9380_EXP_DST_LEN + 1);
+        compute_msg_prime(msg_prime, &ietf_rfc9380_exp_msgs[tv->msg_offset], tv->msg_len,
+                          dst_prime, IETF_RFC9380_EXP_DST_LEN, len_in_bytes);
+        result = memcmp(msg_prime, &ietf_rfc9380_exp_msg_primes[tv->msg_prime_offset], tv->msg_prime_len);
+        /* check if they are equal */
+        CHECK(result == 0);
+        free(dst_prime);
+        free(msg_prime);
+
+        /* Test generation of uniform bytes */
         uniform_bytes = (unsigned char *) checked_malloc(&default_error_callback,
                                                          len_in_bytes);
         result = expand_message_xmd(uniform_bytes, &ietf_rfc9380_exp_msgs[tv->msg_offset], tv->msg_len,
@@ -3098,6 +3120,7 @@ void test_hash_to_curve_expander(void) {
         result = memcmp(uniform_bytes, &ietf_rfc9380_exp_uniform_bytes[tv->uniform_bytes_offset], len_in_bytes);
         /* check if they are equal */
         CHECK(result == 0);
+        free(uniform_bytes);
     }
 }
 
@@ -3135,7 +3158,6 @@ void test_hash_to_curve(void) {
         map_to_curve(&Q[1], &u[1]);
         secp256k1_gej_add_var(&P, &Q[0], &Q[1], NULL);
         clear_cofactor(&P);
-
     }
 
 }
