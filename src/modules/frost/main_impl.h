@@ -11,10 +11,10 @@
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
 
-static const unsigned char hash_context_prefix_h1[29] = "FROST-secp256k1-SHA256-v11rho";
-static const unsigned char hash_context_prefix_h3[31] = "FROST-secp256k1-SHA256-v11nonce";
-static const unsigned char hash_context_prefix_h4[29] = "FROST-secp256k1-SHA256-v11msg";
-static const unsigned char hash_context_prefix_h5[29] = "FROST-secp256k1-SHA256-v11com";
+static const unsigned char hash_context_prefix_h1[28] = "FROST-secp256k1-SHA256-v1rho";
+static const unsigned char hash_context_prefix_h3[30] = "FROST-secp256k1-SHA256-v1nonce";
+static const unsigned char hash_context_prefix_h4[28] = "FROST-secp256k1-SHA256-v1msg";
+static const unsigned char hash_context_prefix_h5[28] = "FROST-secp256k1-SHA256-v1com";
 
 #define SCALAR_SIZE (32U)
 #define SHA256_SIZE (32U)
@@ -184,11 +184,16 @@ static void compute_hash_h3(const unsigned char *msg, uint32_t msg_len, unsigned
     /* TODO: replace with hash-to-curve
     * H3(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.2 using L = 48,
     * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "nonce", and prime modulus equal to Order(). */
+    secp256k1_scalar scalar;
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, hash_context_prefix_h3, sizeof(hash_context_prefix_h3));
     secp256k1_sha256_write(&sha, msg, msg_len);
     secp256k1_sha256_finalize(&sha, hash_value);
+
+    /* Reduce hash to a scalar, and get back its binary representation */
+    secp256k1_scalar_set_b32(&scalar, hash_value, NULL);
+    secp256k1_scalar_get_b32(hash_value, &scalar);
 }
 
 static void compute_hash_h4(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
@@ -263,32 +268,24 @@ SECP256K1_API int secp256k1_frost_pubkey_load(secp256k1_frost_pubkey *pubkey,
     return 1;
 }
 
-SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
-                                              unsigned char *group_pubkey33,
-                                              const secp256k1_frost_pubkey *pubkey) {
+static int secp256k1_frost_pubkey_serialize(unsigned char *output33, const unsigned char *pubkey64) {
+    secp256k1_ge pk;
     size_t size;
-    int compressed;
-    secp256k1_ge pk, gpk;
 
-    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
+    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey64) == 0) {
         return 0;
     }
-    compressed = 1;
-
-    if (secp256k1_fe_set_b32_limit(&pk.x, pubkey->public_key) == 0) {
+    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey64 + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
         return 0;
     }
-    if (secp256k1_fe_set_b32_limit(&pk.y, pubkey->public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
-
     pk.infinity = 0;
+
     /*
      * 0 is a purposely illegal value. We will verify that
      * secp256k1_eckey_pubkey_serialize() sets it to 33
      */
     size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&pk, pubkey33, &size, compressed) == 0) {
+    if (secp256k1_eckey_pubkey_serialize(&pk, output33, &size, 1) == 0) {
         return 0;
     }
     if (size != 33) {
@@ -296,27 +293,21 @@ SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
     }
     secp256k1_ge_clear(&pk);
 
-    if (secp256k1_fe_set_b32_limit(&gpk.x, pubkey->group_public_key) == 0) {
-        return 0;
-    }
-    if (secp256k1_fe_set_b32_limit(&gpk.y, pubkey->group_public_key + SERIALIZED_PUBKEY_X_ONLY_SIZE) == 0) {
-        return 0;
-    }
+    return 1;
+}
 
-    gpk.infinity = 0;
-    /*
-     * 0 is a purposely illegal value. We will verify that
-     * secp256k1_eckey_pubkey_serialize() sets it to 33
-     */
-    size = 0;
-    if (secp256k1_eckey_pubkey_serialize(&gpk, group_pubkey33, &size, compressed) == 0) {
+SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
+                                              unsigned char *group_pubkey33,
+                                              const secp256k1_frost_pubkey *pubkey) {
+    if (pubkey == NULL || pubkey33 == NULL || group_pubkey33 == NULL) {
         return 0;
     }
-    if (size != 33) {
+    if (secp256k1_frost_pubkey_serialize(pubkey33, pubkey->public_key) == 0){
         return 0;
     }
-    secp256k1_ge_clear(&gpk);
-
+    if (secp256k1_frost_pubkey_serialize(group_pubkey33, pubkey->group_public_key) == 0){
+        return 0;
+    }
     return 1;
 }
 
@@ -447,87 +438,114 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
 }
 
 /*
- * Generate coefficients for Shamir Secret Sharing.
+ * Generate random coefficients for Shamir Secret Sharing.
  *
  *  Returns: 1: on success; 0: on failure
- *  Args:            ctx: a secp256k1 context object, initialized for verification.
- *  Out: dkg_commitments: pointer to shamir_coefficients where coefficients will be stored.
- *          coefficients: pointer to shamir_coefficients where coefficients will be stored.
+ *  Out:    coefficients: pointer to shamir_coefficients where coefficients will be stored.
  *  In:  generator_index: index of participant generating coefficients.
- *                secret: secret to be used as known term of the Shamir polynomial
- *      num_participants: number of participants to the secret sharing
  *             threshold: min number of participants needed to reconstruct the secret.
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_context *ctx,
-                                                              secp256k1_frost_vss_commitments *dkg_commitments,
-                                                              shamir_coefficients *coefficients,
-                                                              uint32_t generator_index, const secp256k1_scalar *secret,
-                                                              uint32_t threshold) {
+static SECP256K1_WARN_UNUSED_RESULT int generate_random_coefficients(shamir_coefficients *coefficients,
+                                                                     uint32_t generator_index,
+                                                                     uint32_t threshold) {
     uint32_t c_idx;
-    secp256k1_gej coefficient_cmt;
     const uint32_t num_coefficients = threshold - 1;
 
     coefficients->index = generator_index;
-    dkg_commitments->index = generator_index;
-
-    /* Compute the commitment of the secret term (saved as commitment[0]) */
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
-    serialize_point(&coefficient_cmt, dkg_commitments->coefficient_commitments[0].data);
-
     for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
         /* Generate random coefficients */
         if (initialize_random_scalar(&(coefficients->coefficients[c_idx])) == 0) {
             return 0;
         }
-
-        /* Compute the commitment of each random coefficient (saved as commitment[1...]) */
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
-                             &coefficient_cmt,
-                             &(coefficients->coefficients[c_idx]));
-        serialize_point(&coefficient_cmt, dkg_commitments->coefficient_commitments[c_idx + 1].data);
     }
     return 1;
 }
 
 /*
- * Evaluate Shamir polynomial for each participant.
+ *  Commit to Verifiable Secret Shares
+ *
+ *  Args:            ctx: a secp256k1 context object, initialized for verification.
+ *  Out: vss_commitments: pointer to shamir_coefficients where coefficients will be stored.
+ *  In:     coefficients: pointer to shamir_coefficients where coefficients will be stored.
+ *                secret: secret to be used as known term of the Shamir polynomial
+ *             threshold: min number of participants needed to reconstruct the secret.
+ */
+static void vss_commit(const secp256k1_context *ctx,
+                       secp256k1_frost_vss_commitments *vss_commitments,
+                       const shamir_coefficients *coefficients,
+                       const secp256k1_scalar *secret,
+                       uint32_t threshold) {
+    uint32_t c_idx;
+    secp256k1_gej coefficient_cmt;
+    const uint32_t num_coefficients = threshold - 1;
+
+    vss_commitments->index = coefficients->index;
+
+    /* Compute the commitment of the secret term (saved as commitment[0]) */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
+    serialize_point(&coefficient_cmt, vss_commitments->coefficient_commitments[0].data);
+
+    for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
+        /* Compute the commitment of each random coefficient (saved as commitment[1...]) */
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
+                             &coefficient_cmt,
+                             &(coefficients->coefficients[c_idx]));
+        serialize_point(&coefficient_cmt, vss_commitments->coefficient_commitments[c_idx + 1].data);
+    }
+}
+
+
+/*
+ * Evaluate the Shamir polynomial f(x) at a particular point x using Horner's method.
+ *
+ *  Out:         value: Scalar result of the polynomial evaluated at input x.
+ *  In:   coefficients: pointer to shamir_coefficients
+ *              secret: secret to be used as known term of the Shamir polynomial
+ *                   x:  input at which to evaluate the polynomial (treated as a Scalar)
+ */
+static void polynomial_evaluate(secp256k1_scalar *value,
+                                const shamir_coefficients *coefficients, const secp256k1_scalar *secret,
+                                uint32_t x) {
+    secp256k1_scalar scalar_x;
+    uint32_t c_idx;
+
+    secp256k1_scalar_set_int(&scalar_x, x);
+    secp256k1_scalar_set_int(value, 0);
+    for (c_idx = coefficients->num_coefficients; c_idx > 0; c_idx--) {
+        secp256k1_scalar_add(value, value, &(coefficients->coefficients[c_idx - 1]));
+        secp256k1_scalar_mul(value, value, &scalar_x);
+    }
+
+    /* The secret is the *constant* term in the polynomial used for secret sharing,
+     * this is typical in schemes that build upon Shamir Secret Sharing. */
+    secp256k1_scalar_add(value, value, secret);
+}
+
+/*
+ * Shard secret for each participant by evaluating the Shamir polynomial.
  *
  *  Returns: 1: on success; 0: on failure
- *  Out:   shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
- *  In:   coefficients: pointer to shamir_coefficients where coefficients will be stored.
- *     generator_index: index of participant generating coefficients.
- *    num_participants: number of participants to the secret sharing
- *        coefficients: pointer to shamir_coefficients.
- *              secret: secret to be used as known term of the Shamir polynomial.
+ *  Out: secret_key_shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
+ *  In:    generator_index: index of participant generating coefficients.
+ *        num_participants: number of participants to the secret sharing
+ *            coefficients: pointer to shamir_coefficients.
+ *                  secret: secret to be used as known term of the Shamir polynomial.
  */
-static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shares,
-                                       uint32_t generator_index, uint32_t num_participants,
-                                       const shamir_coefficients *coefficients, const secp256k1_scalar *secret) {
-    /* For each participant, evaluate the polynomial and save in shares:
+static void secret_share_shard(secp256k1_frost_keygen_secret_share *secret_key_shares,
+                               uint32_t generator_index, uint32_t num_participants,
+                               const shamir_coefficients *coefficients, const secp256k1_scalar *secret) {
+    /* For each participant, evaluate the polynomial and save in secret_key_shares:
      * {generator_index, participant_index, f(participant_index)} */
     uint32_t index;
     for (index = 1; index < num_participants + 1; index++) {
-        /* Evaluate the polynomial with `secret` as the constant term
-         * and `coefficients` as the other coefficients at the point x=share_index
-         * using Horner's method */
-        secp256k1_scalar scalar_index;
         secp256k1_scalar value;
-        uint32_t c_idx;
 
-        secp256k1_scalar_set_int(&scalar_index, index);
-        secp256k1_scalar_set_int(&value, 0);
-        for (c_idx = coefficients->num_coefficients; c_idx > 0; c_idx--) {
-            secp256k1_scalar_add(&value, &value, &(coefficients->coefficients[c_idx - 1]));
-            secp256k1_scalar_mul(&value, &value, &scalar_index);
-        }
+        polynomial_evaluate(&value, coefficients, secret, index);
 
-        /* The secret is the *constant* term in the polynomial used for secret sharing,
-         * this is typical in schemes that build upon Shamir Secret Sharing. */
-        secp256k1_scalar_add(&value, &value, secret);
-        secp256k1_scalar_get_b32(shares[index - 1].value, &value);
-
-        shares[index - 1].generator_index = generator_index;
-        shares[index - 1].receiver_index = index;
+        /* Save share in secret_key_shares */
+        secp256k1_scalar_get_b32(secret_key_shares[index - 1].value, &value);
+        secret_key_shares[index - 1].generator_index = generator_index;
+        secret_key_shares[index - 1].receiver_index = index;
     }
 }
 
@@ -537,27 +555,27 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
  *
  * Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out:    coefficients: commitments to the Shamir polynomial coefficients.
- *                shares: array containing the polynomial computed for each participant (expected to be allocated)
- *  In: num_participants: number of shares and commitments.
- *             threshold: Signature threshold
- *       generator_index: participant index.
- *                secret: Secret value to use as constant term of the polynomial
+ *  Out: vss_coefficients: commitments to the Shamir polynomial coefficients.
+ *      secret_key_shares: array containing the polynomial computed for each participant (expected to be allocated)
+ *  In:  num_participants: number of secret_key_shares and commitments.
+ *              threshold: Signature threshold
+ *        generator_index: participant index.
+ *                 secret: Secret value to use as constant term of the polynomial
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context *ctx,
-                                                        secp256k1_frost_vss_commitments *dkg_commitments,
-                                                        secp256k1_frost_keygen_secret_share *shares,
-                                                        uint32_t num_participants, uint32_t threshold,
-                                                        uint32_t generator_index,
-                                                        const secp256k1_scalar *secret) {
+static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(const secp256k1_context *ctx,
+                                                                               secp256k1_frost_vss_commitments *vss_commitments,
+                                                                               secp256k1_frost_keygen_secret_share *secret_key_shares,
+                                                                               uint32_t num_participants, uint32_t threshold,
+                                                                               uint32_t generator_index,
+                                                                               const secp256k1_scalar *secret) {
     int ret_coefficients;
     shamir_coefficients *coefficients;
     coefficients = shamir_coefficients_create(threshold);
 
-    ret_coefficients = generate_coefficients(ctx, dkg_commitments, coefficients, generator_index, secret, threshold);
+    ret_coefficients = generate_random_coefficients(coefficients, generator_index, threshold);
     if (ret_coefficients == 1) {
-        evaluate_shamir_polynomial(shares, generator_index,
-                                   num_participants, coefficients, secret);
+        secret_share_shard(secret_key_shares, generator_index, num_participants, coefficients, secret);
+        vss_commit(ctx, vss_commitments, coefficients, secret, threshold);
     }
 
     shamir_coefficients_destroy(coefficients);
@@ -567,7 +585,6 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
 /*
  * Generate a challenge for DKG.
  *
- * Returns 1 on success, 0 on failure.
  *  Out:  challenge: pointer to scalar where the challenge will be stored.
  *  In:       index: participant identifier.
  *    context_nonce: tag to use during DKG
@@ -575,11 +592,11 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares(const secp256k1_context 
  *       public_key: participant public key used for computing the challenge.
  *       commitment: commitment to a random value.
  */
-static SECP256K1_WARN_UNUSED_RESULT int generate_dkg_challenge(secp256k1_scalar *challenge,
-                                                               const uint32_t index, const unsigned char *context_nonce,
-                                                               const uint32_t nonce_length,
-                                                               const secp256k1_gej *public_key,
-                                                               const secp256k1_gej *commitment) {
+static void generate_dkg_challenge(secp256k1_scalar *challenge,
+                                   const uint32_t index, const unsigned char *context_nonce,
+                                   const uint32_t nonce_length,
+                                   const secp256k1_gej *public_key,
+                                   const secp256k1_gej *commitment) {
     uint32_t challenge_input_length;
     unsigned char *challenge_input;
     unsigned char hash_value[SHA256_SIZE];
@@ -607,7 +624,6 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_dkg_challenge(secp256k1_scalar 
     if (challenge_input != NULL) {
         free(challenge_input);
     }
-    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ctx, const secp256k1_scalar *challenge,
@@ -628,8 +644,8 @@ static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ct
 
 /* TODO: to improve testability of this function, it should be deterministic. */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(const secp256k1_context *ctx,
-                                                                                secp256k1_frost_vss_commitments *dkg_commitment,
-                                                                                secp256k1_frost_keygen_secret_share *shares,
+                                                                                secp256k1_frost_vss_commitments *vss_commitments,
+                                                                                secp256k1_frost_keygen_secret_share *secret_key_shares,
                                                                                 uint32_t num_participants,
                                                                                 uint32_t threshold,
                                                                                 uint32_t generator_index,
@@ -638,19 +654,19 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     secp256k1_scalar secret, r, z, challenge;
     secp256k1_gej s_pub, zkp_r;
 
-    if (ctx == NULL || dkg_commitment == NULL || shares == NULL || context == NULL) {
+    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || context == NULL) {
         return 0;
     }
     if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
         return 0;
     }
 
-    dkg_commitment->index = generator_index;
+    vss_commitments->index = generator_index;
     if (initialize_random_scalar(&secret) == 0) {
         return 0;
     }
-    if (generate_shares(ctx, dkg_commitment, shares, num_participants,
-                        threshold, generator_index, &secret) == 0) {
+    if (generate_shares_with_random_polynomial(ctx, vss_commitments, secret_key_shares, num_participants,
+                                               threshold, generator_index, &secret) == 0) {
         return 0;
     }
 
@@ -659,15 +675,13 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     }
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &zkp_r, &r);
-    serialize_point(&zkp_r, dkg_commitment->zkp_r);
-    if (generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r) == 0) {
-        return 0;
-    }
+    serialize_point(&zkp_r, vss_commitments->zkp_r);
+    generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r);
 
     /* z = r + secret * H(context, G^secret, G^r) */
     secp256k1_scalar_mul(&z, &secret, &challenge);
     secp256k1_scalar_add(&z, &r, &z);
-    secp256k1_scalar_get_b32(dkg_commitment->zkp_z, &z);
+    secp256k1_scalar_get_b32(vss_commitments->zkp_z, &z);
 
     /* Cleaning context */
     secp256k1_scalar_clear(&secret);
@@ -688,12 +702,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
 
     deserialize_point(&peer_zkp_r, peer_commitment->zkp_r);
     deserialize_point(&secret_commitment, peer_commitment->coefficient_commitments[0].data);
-    if (generate_dkg_challenge(&challenge, peer_commitment->index,
+    generate_dkg_challenge(&challenge, peer_commitment->index,
                                context, context_length,
                                &secret_commitment,
-                               &peer_zkp_r) == 0) {
-        return 0;
-    }
+                               &peer_zkp_r);
     return is_valid_zkp(ctx, &challenge, peer_commitment);
 }
 
@@ -769,58 +781,84 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     return 1;
 }
 
+static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
+        const secp256k1_context *ctx,
+        secp256k1_frost_vss_commitments *vss_commitments,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
+        secp256k1_frost_keypair *keypairs,
+        uint32_t num_participants,
+        uint32_t threshold,
+        const secp256k1_scalar *secret,
+        const shamir_coefficients *coefficients,
+        uint32_t generator_index) {
+    secp256k1_gej group_public_key;
+    uint32_t index;
+
+    /* Parameter checking */
+    if (ctx == NULL || vss_commitments == NULL || secret_key_shares == NULL || keypairs == NULL) {
+        return 0;
+    }
+    if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
+        return 0;
+    }
+
+    /* Compute group public key */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, secret);
+
+    /* Compute secret shares and commit to polynomial coefficients */
+    secret_share_shard(secret_key_shares, generator_index, num_participants, coefficients, secret);
+    vss_commitments->index = generator_index;
+    vss_commit(ctx, vss_commitments, coefficients, secret, threshold);
+
+    /* Preparing output key-pairs */
+    for (index = 0; index < num_participants; index++) {
+        secp256k1_scalar share_value;
+        secp256k1_gej pubkey;
+
+        secp256k1_scalar_set_b32(&share_value, secret_key_shares[index].value, NULL);
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
+        serialize_point(&pubkey, keypairs[index].public_keys.public_key);
+
+        memcpy(&keypairs[index].secret, &secret_key_shares[index].value, SCALAR_SIZE);
+        serialize_point(&group_public_key, keypairs[index].public_keys.group_public_key);
+        keypairs[index].public_keys.index = secret_key_shares[index].receiver_index;
+        keypairs[index].public_keys.max_participants = num_participants;
+    }
+    return 1;
+}
+
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
         const secp256k1_context *ctx,
-        secp256k1_frost_vss_commitments *share_commitment,
-        secp256k1_frost_keygen_secret_share *shares,
+        secp256k1_frost_vss_commitments *vss_commitments,
+        secp256k1_frost_keygen_secret_share *secret_key_shares,
         secp256k1_frost_keypair *keypairs,
         uint32_t num_participants,
         uint32_t threshold) {
 
     secp256k1_scalar secret;
-    secp256k1_gej group_public_key;
-    uint32_t generator_index, index;
+    uint32_t generator_index;
+    shamir_coefficients *coefficients;
+    int result;
 
-    if (ctx == NULL || share_commitment == NULL || shares == NULL || keypairs == NULL) {
-        return 0;
-    }
-
-    /* We use generator_index=0 as we are generating shares with a dealer */
+    /* We use generator_index=0 as we are generating secret_key_shares with a dealer */
     generator_index = 0;
 
-    /* Parameter checking */
-    if (threshold < 1 || num_participants < 1 || threshold > num_participants) {
-        return 0;
-    }
-
-    /* Initialization */
-    share_commitment->index = generator_index;
+    /* Generate random as secret */
     if (initialize_random_scalar(&secret) == 0) {
         return 0;
     }
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &group_public_key, &secret);
-
-    /* Generate shares */
-    if (generate_shares(ctx, share_commitment, shares, num_participants,
-                        threshold, generator_index, &secret) == 0) {
-        return 0;
+    /* Generate secret_key_shares */
+    coefficients = shamir_coefficients_create(threshold);
+    result = 0;
+    if (generate_random_coefficients(coefficients, generator_index, threshold) == 1) {
+        result = secp256k1_frost_keygen_with_dealer_core(
+                ctx, vss_commitments, secret_key_shares, keypairs,
+                num_participants, threshold, &secret, coefficients, generator_index);
     }
 
-    /* Preparing output */
-    for (index = 0; index < num_participants; index++) {
-        secp256k1_scalar share_value;
-        secp256k1_gej pubkey;
-
-        secp256k1_scalar_set_b32(&share_value, shares[index].value, NULL);
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
-        serialize_point(&pubkey, keypairs[index].public_keys.public_key);
-
-        memcpy(&keypairs[index].secret, &shares[index].value, SCALAR_SIZE);
-        serialize_point(&group_public_key, keypairs[index].public_keys.group_public_key);
-        keypairs[index].public_keys.index = shares[index].receiver_index;
-        keypairs[index].public_keys.max_participants = num_participants;
-    }
-    return 1;
+    /* Free allocated memory */
+    shamir_coefficients_destroy(coefficients);
+    return result;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int signing_commitment_compare(secp256k1_frost_nonce_commitment *s1,
