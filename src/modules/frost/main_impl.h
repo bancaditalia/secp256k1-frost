@@ -113,11 +113,8 @@ static void serialize_point_xonly(const secp256k1_gej *point, unsigned char *out
     secp256k1_fe_get_b32(output, &(commitment.x));
 }
 
-static void serialize_scalar(const uint32_t value, unsigned char *ret) {
-    secp256k1_scalar value_as_scalar;
-    secp256k1_scalar_set_int(&value_as_scalar, value);
-    secp256k1_scalar_get_b32(ret, &value_as_scalar);
-    secp256k1_scalar_clear(&value_as_scalar);
+static void serialize_scalar(const secp256k1_scalar value, unsigned char *ret) {
+    secp256k1_scalar_get_b32(ret, &value);
 }
 
 static void secp256k1_frost_signature_serialize(unsigned char *output64,
