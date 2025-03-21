@@ -1988,7 +1988,7 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
                                            signature_shares,
                                            num_participants);
         CHECK(result == 1);
-
+        signature[0] += 1;
         /* Step 5: verify aggregated signature */
         result = secp256k1_frost_verify(sign_verify_ctx,
                                         signature,
