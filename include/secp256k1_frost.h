@@ -278,7 +278,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
         uint32_t index,
         uint32_t num_participants,
         const secp256k1_frost_keygen_secret_share *shares,
-        secp256k1_frost_vss_commitments **commitments
+        const secp256k1_frost_vss_commitments **commitments
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6);
 
 /*
@@ -330,8 +330,8 @@ SECP256K1_API int secp256k1_frost_sign(
         const unsigned char *msg32,
         uint32_t num_signers,
         const secp256k1_frost_keypair *keypair,
-        secp256k1_frost_nonce *nonce,
-        secp256k1_frost_nonce_commitment *signing_commitments
+        const secp256k1_frost_nonce *nonce,
+        const secp256k1_frost_nonce_commitment *signing_commitments
 ) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6)
 SECP256K1_ARG_NONNULL(7);
 
@@ -361,7 +361,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
         const unsigned char *msg32,
         const secp256k1_frost_keypair *keypair,
         const secp256k1_frost_pubkey *public_keys,
-        secp256k1_frost_nonce_commitment *commitments,
+        const secp256k1_frost_nonce_commitment *commitments,
         const secp256k1_frost_signature_share *signature_shares,
         uint32_t num_signers
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4)
