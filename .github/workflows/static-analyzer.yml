@@ -1,0 +1,49 @@
+name: Run GCC 13 static analyzer on the code, failing on any warning
+
+on:
+  push:
+    branches:
+      - frost
+  pull_request:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  # source for using Fedora via a container in the runner:
+  #     https://github.com/avocado-framework/avocado/actions/runs/2730087531/workflow#L15-L32
+  # and
+  #     https://github.com/actions/runner-images/issues/2307#issuecomment-1576493700
+  run:
+    runs-on: ubuntu-22.04
+    container:
+      image: fedora:38
+    steps:
+      - name: install build dependencies
+        run: |
+          dnf install -y \
+              autoconf \
+              automake \
+              gcc \
+              libtool \
+              pkg-config
+      - uses: actions/checkout@v3
+        with:
+          #ref: 'master'
+          fetch-depth: 1
+      - name: configure with static analyzer enabled
+        # cannot use ${{github.workspace}} variable inside a container, we must
+        # use ${GITHUB_WORKSPACE}, see:
+        #    https://github.com/actions/runner/issues/2058
+        # and
+        #    https://github.com/actions/runner/pull/2517
+        run: |
+          ./autogen.sh
+          ./configure \
+              SECP_CFLAGS="-fanalyzer -fanalyzer-transitivity -Werror" \
+              --disable-tests \
+              --disable-exhaustive-tests \
+              --disable-benchmark \
+              --enable-experimental \
+              --enable-module-frost
+      - name: build, failing in case of warnings
+        run: make
