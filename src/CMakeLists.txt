@@ -91,7 +91,7 @@ if(SECP256K1_BUILD_TESTS)
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Coverage")
     add_executable(tests tests.c)
     target_compile_definitions(tests PRIVATE VERIFY)
-    target_link_libraries(tests secp256k1_precomputed secp256k1_asm)
+    target_link_libraries(tests secp256k1_precomputed secp256k1_asm $<$<PLATFORM_ID:Windows>:bcrypt>) # FROST_SPECIFIC: conditionally add brcypt for Windows (MinGW) builds
     add_test(NAME tests COMMAND tests)
   endif()
 endif()
@@ -99,7 +99,7 @@ endif()
 if(SECP256K1_BUILD_EXHAUSTIVE_TESTS)
   # Note: do not include secp256k1_precomputed in exhaustive_tests (it uses runtime-generated tables).
   add_executable(exhaustive_tests tests_exhaustive.c)
-  target_link_libraries(exhaustive_tests secp256k1_asm)
+  target_link_libraries(exhaustive_tests secp256k1_asm $<$<PLATFORM_ID:Windows>:bcrypt>) # FROST_SPECIFIC: conditionally add brcypt for Windows (MinGW) builds
   target_compile_definitions(exhaustive_tests PRIVATE $<$<NOT:$<CONFIG:Coverage>>:VERIFY>)
   add_test(NAME exhaustive_tests COMMAND exhaustive_tests)
 endif()
