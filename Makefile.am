@@ -97,6 +97,11 @@ libsecp256k1_la_SOURCES = src/secp256k1.c
 libsecp256k1_la_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 libsecp256k1_la_LIBADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 libsecp256k1_la_LDFLAGS = -no-undefined -version-info $(LIB_VERSION_CURRENT):$(LIB_VERSION_REVISION):$(LIB_VERSION_AGE)
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+libsecp256k1_la_LDFLAGS += -lbcrypt
+endif
+# FROST_SPECIFIC - END
 
 noinst_PROGRAMS =
 if USE_BENCHMARK
@@ -107,9 +112,19 @@ bench_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 bench_internal_SOURCES = src/bench_internal.c
 bench_internal_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 bench_internal_CPPFLAGS = $(SECP_CONFIG_DEFINES)
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+bench_internal_LDFLAGS = -lbcrypt
+endif
+# FROST_SPECIFIC - END
 bench_ecmult_SOURCES = src/bench_ecmult.c
 bench_ecmult_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 bench_ecmult_CPPFLAGS = $(SECP_CONFIG_DEFINES)
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+bench_ecmult_LDFLAGS = -lbcrypt
+endif
+# FROST_SPECIFIC - END
 endif
 
 TESTS =
@@ -120,6 +135,11 @@ noverify_tests_SOURCES = src/tests.c
 noverify_tests_CPPFLAGS = $(SECP_CONFIG_DEFINES)
 noverify_tests_LDADD = $(COMMON_LIB) $(PRECOMPUTED_LIB)
 noverify_tests_LDFLAGS = -static
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+noverify_tests_LDFLAGS += -lbcrypt
+endif
+# FROST_SPECIFIC - END
 if !ENABLE_COVERAGE
 TESTS += tests
 noinst_PROGRAMS += tests
@@ -127,6 +147,11 @@ tests_SOURCES  = $(noverify_tests_SOURCES)
 tests_CPPFLAGS = $(noverify_tests_CPPFLAGS) -DVERIFY
 tests_LDADD    = $(noverify_tests_LDADD)
 tests_LDFLAGS  = $(noverify_tests_LDFLAGS)
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+tests_LDFLAGS += -lbcrypt
+endif
+# FROST_SPECIFIC - END
 endif
 endif
 
@@ -147,13 +172,18 @@ endif
 # Note: do not include $(PRECOMPUTED_LIB) in exhaustive_tests (it uses runtime-generated tables).
 exhaustive_tests_LDADD = $(COMMON_LIB)
 exhaustive_tests_LDFLAGS = -static
+# FROST_SPECIFIC - START
+if BUILD_WINDOWS
+exhaustive_tests_LDFLAGS += -lbcrypt
+endif
+# FROST_SPECIFIC - END
 TESTS += exhaustive_tests
 endif
 
 if USE_EXAMPLES
 noinst_PROGRAMS += ecdsa_example
 ecdsa_example_SOURCES = examples/ecdsa.c
-ecdsa_example_CPPFLAGS = -I$(top_srcdir)/include
+ecdsa_example_CPPFLAGS = -I$(top_srcdir)/include -DSECP256K1_STATIC
 ecdsa_example_LDADD = libsecp256k1.la
 ecdsa_example_LDFLAGS = -static
 if BUILD_WINDOWS
@@ -163,7 +193,7 @@ TESTS += ecdsa_example
 if ENABLE_MODULE_ECDH
 noinst_PROGRAMS += ecdh_example
 ecdh_example_SOURCES = examples/ecdh.c
-ecdh_example_CPPFLAGS = -I$(top_srcdir)/include
+ecdh_example_CPPFLAGS = -I$(top_srcdir)/include -DSECP256K1_STATIC
 ecdh_example_LDADD = libsecp256k1.la
 ecdh_example_LDFLAGS = -static
 if BUILD_WINDOWS
@@ -174,7 +204,7 @@ endif
 if ENABLE_MODULE_SCHNORRSIG
 noinst_PROGRAMS += schnorr_example
 schnorr_example_SOURCES = examples/schnorr.c
-schnorr_example_CPPFLAGS = -I$(top_srcdir)/include
+schnorr_example_CPPFLAGS = -I$(top_srcdir)/include -DSECP256K1_STATIC
 schnorr_example_LDADD = libsecp256k1.la
 schnorr_example_LDFLAGS = -static
 if BUILD_WINDOWS
@@ -187,7 +217,7 @@ endif
 if ENABLE_MODULE_FROST
 noinst_PROGRAMS += frost_example
 frost_example_SOURCES = examples/frost.c
-frost_example_CPPFLAGS = -I$(top_srcdir)/include
+frost_example_CPPFLAGS = -I$(top_srcdir)/include -DSECP256K1_STATIC
 frost_example_LDADD = libsecp256k1.la
 frost_example_LDFLAGS = -static
 if BUILD_WINDOWS
@@ -204,11 +234,11 @@ EXTRA_PROGRAMS = precompute_ecmult precompute_ecmult_gen
 CLEANFILES = $(EXTRA_PROGRAMS)
 
 precompute_ecmult_SOURCES = src/precompute_ecmult.c
-precompute_ecmult_CPPFLAGS = $(SECP_CONFIG_DEFINES)
+precompute_ecmult_CPPFLAGS = $(SECP_CONFIG_DEFINES) -DVERIFY
 precompute_ecmult_LDADD = $(COMMON_LIB)
 
 precompute_ecmult_gen_SOURCES = src/precompute_ecmult_gen.c
-precompute_ecmult_gen_CPPFLAGS = $(SECP_CONFIG_DEFINES)
+precompute_ecmult_gen_CPPFLAGS = $(SECP_CONFIG_DEFINES) -DVERIFY
 precompute_ecmult_gen_LDADD = $(COMMON_LIB)
 
 # See Automake manual, Section "Errors with distclean".
@@ -281,6 +311,10 @@ endif
 
 if ENABLE_MODULE_SCHNORRSIG
 include src/modules/schnorrsig/Makefile.am.include
+endif
+
+if ENABLE_MODULE_ELLSWIFT
+include src/modules/ellswift/Makefile.am.include
 endif
 
 # FROST_SPECIFIC - START

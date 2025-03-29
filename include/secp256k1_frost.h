@@ -9,6 +9,7 @@
 
 #include "secp256k1.h"
 #include "secp256k1_extrakeys.h"
+#include "stdint.h"
 
 #ifdef __cplusplus
 extern "C" {

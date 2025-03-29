@@ -5,6 +5,11 @@
  *************************************************************************/
 
 /*
+ * FROST_SPECIFIC: this file is an excerpt of "examples/examples_util.h" in the
+ * secp256k1 repository.
+ */
+
+/*
  * This file is an attempt at collecting best practice methods for obtaining randomness with different operating systems.
  * It may be out-of-date. Consult the documentation of the operating system before considering to use the methods below.
  *
@@ -67,42 +72,4 @@ static int fill_random(unsigned char* data, size_t size) {
     }
 #endif
     return 0;
-}
-
-static void print_hex(unsigned char* data, size_t size) {
-    size_t i;
-    printf("0x");
-    for (i = 0; i < size; i++) {
-        printf("%02x", data[i]);
-    }
-    printf("\n");
-}
-
-#if defined(_MSC_VER)
-// For SecureZeroMemory
-#include <Windows.h>
-#endif
-/* Cleanses memory to prevent leaking sensitive info. Won't be optimized out. */
-static void secure_erase(void *ptr, size_t len) {
-#if defined(_MSC_VER)
-    /* SecureZeroMemory is guaranteed not to be optimized out by MSVC. */
-    SecureZeroMemory(ptr, len);
-#elif defined(__GNUC__)
-    /* We use a memory barrier that scares the compiler away from optimizing out the memset.
-     *
-     * Quoting Adam Langley <agl@google.com> in commit ad1907fe73334d6c696c8539646c21b11178f20f
-     * in BoringSSL (ISC License):
-     *    As best as we can tell, this is sufficient to break any optimisations that
-     *    might try to eliminate "superfluous" memsets.
-     * This method used in memzero_explicit() the Linux kernel, too. Its advantage is that it is
-     * pretty efficient, because the compiler can still implement the memset() efficiently,
-     * just not remove it entirely. See "Dead Store Elimination (Still) Considered Harmful" by
-     * Yang et al. (USENIX Security 2017) for more background.
-     */
-    memset(ptr, 0, len);
-    __asm__ __volatile__("" : : "r"(ptr) : "memory");
-#else
-    void *(*volatile const volatile_memset)(void *, int, size_t) = memset;
-    volatile_memset(ptr, 0, len);
-#endif
 }
