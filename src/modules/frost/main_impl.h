@@ -1109,6 +1109,9 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
     binding_factors->num_binding_factors = num_signers;
 
     /* Note: this sorting is performed in place; but this is acceptable. */
+    /* FIXME: signing_commitments should be treated as a constant. Do not sort in-place.
+     *        consider sorting a supplemental array of indexes, instead of copying/moving
+     *        secp256k1_frost_nonce_commitment (which is 132 bytes long) */
     secp256k1_hsort(signing_commitments, num_signers, sizeof(*signing_commitments),
                     secp256k1_frost_signing_commitments_sort_cmp, (void *) ctx);
 
