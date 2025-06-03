@@ -582,6 +582,10 @@ void test_secp256k1_frost_keygen_validate_invalid_secret_commitment(void) {
 
     /* now, set the first commitments to be invalid */
     secp256k1_gej_clear(&_invalidPoint);
+    secp256k1_fe_set_int(&_invalidPoint.x, 1);
+    secp256k1_fe_set_int(&_invalidPoint.y, 0);
+    secp256k1_fe_set_int(&_invalidPoint.z, 1);
+    _invalidPoint.infinity = 0;
     serialize_point(&_invalidPoint, dkg_commitment->coefficient_commitments[0].data);
 
     /* now, ensure that this dkg commitment is marked as invalid */
@@ -957,6 +961,10 @@ void test_secp256k1_frost_keygen_finalize_invalid_commitments(void) {
 
     /* now, set the first commitments to be invalid */
     secp256k1_gej_clear(&_invalidPoint);
+    secp256k1_fe_set_int(&_invalidPoint.x, 1);
+    secp256k1_fe_set_int(&_invalidPoint.y, 0);
+    secp256k1_fe_set_int(&_invalidPoint.z, 1);
+    _invalidPoint.infinity = 0;
     serialize_point(&_invalidPoint, dkg_commitment[0]->coefficient_commitments[0].data);
 
     /* Step 4. keygen finalize for each participant */
