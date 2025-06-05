@@ -22,10 +22,11 @@ env:
   RECOVERY: no
   EXTRAKEYS: no
   SCHNORRSIG: no
+  MUSIG: no
   ELLSWIFT: no
   FROST: no       # FROST_SPECIFIC
   ### test options
-  SECP256K1_TEST_ITERS:
+  SECP256K1_TEST_ITERS: 64
   BENCH: yes
   SECP256K1_BENCH_ITERS: 2
   CTIMETESTS: yes
@@ -70,6 +71,7 @@ task:
     RECOVERY: yes
     EXTRAKEYS: yes
     SCHNORRSIG: yes
+    MUSIG: yes
     ELLSWIFT: yes
     EXPERIMENTAL: yes # FROST_SPECIFIC
     FROST: yes        # FROST_SPECIFIC
@@ -89,6 +91,7 @@ task:
     RECOVERY: yes
     EXTRAKEYS: yes
     SCHNORRSIG: yes
+    MUSIG: yes
     ELLSWIFT: yes
     EXPERIMENTAL: yes # FROST_SPECIFIC
     FROST: yes        # FROST_SPECIFIC
