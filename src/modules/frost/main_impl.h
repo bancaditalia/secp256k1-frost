@@ -116,6 +116,7 @@ static void serialize_scalar(const uint32_t value, unsigned char *ret) {
     secp256k1_scalar value_as_scalar;
     secp256k1_scalar_set_int(&value_as_scalar, value);
     secp256k1_scalar_get_b32(ret, &value_as_scalar);
+    secp256k1_scalar_clear(&value_as_scalar);
 }
 
 static void serialize_frost_signature(unsigned char *output64,
@@ -408,6 +409,13 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(const secp256k
     serialize_point(&hiding_cmt, nonce->commitments.hiding);
 
     nonce->used = 0;
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&hiding);
+    secp256k1_scalar_clear(&binding);
+    secp256k1_gej_clear(&hiding_cmt);
+    secp256k1_gej_clear(&binding_cmt);
+
     return nonce;
 }
 
@@ -487,6 +495,10 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
                              &(coefficients->coefficients[c_idx]));
         serialize_point(&coefficient_cmt, dkg_commitments->coefficient_commitments[c_idx + 1].data);
     }
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&coefficient_cmt);
+
     return 1;
 }
 
@@ -507,12 +519,13 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
     /* For each participant, evaluate the polynomial and save in shares:
      * {generator_index, participant_index, f(participant_index)} */
     uint32_t index;
+    secp256k1_scalar scalar_index;
+    secp256k1_scalar value;
+
     for (index = 1; index < num_participants + 1; index++) {
         /* Evaluate the polynomial with `secret` as the constant term
          * and `coefficients` as the other coefficients at the point x=share_index
          * using Horner's method */
-        secp256k1_scalar scalar_index;
-        secp256k1_scalar value;
         uint32_t c_idx;
 
         secp256k1_scalar_set_int(&scalar_index, index);
@@ -530,6 +543,10 @@ static void evaluate_shamir_polynomial(secp256k1_frost_keygen_secret_share *shar
         shares[index - 1].generator_index = generator_index;
         shares[index - 1].receiver_index = index;
     }
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&scalar_index);
+    secp256k1_scalar_clear(&value);
 }
 
 /*
@@ -615,6 +632,7 @@ static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ct
                                                      const secp256k1_frost_vss_commitments *commitment) {
     secp256k1_gej reference, z_commitment, commitment_challenge, zkp_r, coefficient_commitment;
     secp256k1_scalar z;
+    int is_valid;
 
     deserialize_point(&coefficient_commitment, commitment->coefficient_commitments[0].data);
     secp256k1_scalar_set_b32(&z, commitment->zkp_z, NULL);
@@ -624,7 +642,17 @@ static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ct
     secp256k1_gej_add_var(&reference, &z_commitment, &commitment_challenge, NULL);
 
     deserialize_point(&zkp_r, commitment->zkp_r);
-    return secp256k1_gej_eq(&zkp_r, &reference);
+    is_valid = secp256k1_gej_eq(&zkp_r, &reference);
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&reference);
+    secp256k1_gej_clear(&z_commitment);
+    secp256k1_gej_clear(&commitment_challenge);
+    secp256k1_gej_clear(&zkp_r);
+    secp256k1_gej_clear(&coefficient_commitment);
+    secp256k1_scalar_clear(&z);
+
+    return is_valid;
 }
 
 /* TODO: to improve testability of this function, it should be deterministic. */
@@ -670,9 +698,14 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     secp256k1_scalar_add(&z, &r, &z);
     secp256k1_scalar_get_b32(dkg_commitment->zkp_z, &z);
 
-    /* Cleaning context */
+    /* Clean-up temporary variables */
     secp256k1_scalar_clear(&secret);
     secp256k1_scalar_clear(&r);
+    secp256k1_scalar_clear(&z);
+    secp256k1_scalar_clear(&challenge);
+    secp256k1_gej_clear(&s_pub);
+    secp256k1_gej_clear(&zkp_r);
+
     return 1;
 }
 
@@ -682,6 +715,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
         const unsigned char *context, uint32_t context_length) {
     secp256k1_scalar challenge;
     secp256k1_gej peer_zkp_r, secret_commitment;
+    int is_valid;
 
     if (ctx == NULL || peer_commitment == NULL || context == NULL) {
         return 0;
@@ -695,7 +729,15 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
                                &peer_zkp_r) == 0) {
         return 0;
     }
-    return is_valid_zkp(ctx, &challenge, peer_commitment);
+
+    is_valid = is_valid_zkp(ctx, &challenge, peer_commitment);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&challenge);
+    secp256k1_gej_clear(&peer_zkp_r);
+    secp256k1_gej_clear(&secret_commitment);
+
+    return is_valid;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int verify_secret_share(const secp256k1_context *ctx,
@@ -704,6 +746,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_secret_share(const secp256k1_cont
     secp256k1_scalar x, x_to_the_i, scalar_share_value;
     secp256k1_gej f_result, result;
     uint32_t index;
+    int is_valid;
 
     secp256k1_scalar_set_b32(&scalar_share_value, share->value, NULL);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &f_result, &scalar_share_value);
@@ -719,7 +762,17 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_secret_share(const secp256k1_cont
         secp256k1_gej_add_var(&result, &result, &current, NULL);
         secp256k1_scalar_mul(&x_to_the_i, &x_to_the_i, &x);
     }
-    return secp256k1_gej_eq(&f_result, &result);
+
+    is_valid = secp256k1_gej_eq(&f_result, &result);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&x);
+    secp256k1_scalar_clear(&x_to_the_i);
+    secp256k1_scalar_clear(&scalar_share_value);
+    secp256k1_gej_clear(&f_result);
+    secp256k1_gej_clear(&result);
+
+    return is_valid;
 }
 
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finalize(
@@ -767,6 +820,12 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     }
     serialize_point(&group_pubkey, keypair->public_keys.group_public_key);
     keypair->public_keys.max_participants = num_participants;
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&scalar_secret);
+    secp256k1_gej_clear(&pubkey);
+    secp256k1_gej_clear(&group_pubkey);
+
     return 1;
 }
 
@@ -808,19 +867,30 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     }
 
     /* Preparing output */
-    for (index = 0; index < num_participants; index++) {
+    {
         secp256k1_scalar share_value;
         secp256k1_gej pubkey;
 
-        secp256k1_scalar_set_b32(&share_value, shares[index].value, NULL);
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
-        serialize_point(&pubkey, keypairs[index].public_keys.public_key);
+        for (index = 0; index < num_participants; index++) {
+            secp256k1_scalar_set_b32(&share_value, shares[index].value, NULL);
+            secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
+            serialize_point(&pubkey, keypairs[index].public_keys.public_key);
 
-        memcpy(&keypairs[index].secret, &shares[index].value, SCALAR_SIZE);
-        serialize_point(&group_public_key, keypairs[index].public_keys.group_public_key);
-        keypairs[index].public_keys.index = shares[index].receiver_index;
-        keypairs[index].public_keys.max_participants = num_participants;
+            memcpy(&keypairs[index].secret, &shares[index].value, SCALAR_SIZE);
+            serialize_point(&group_public_key, keypairs[index].public_keys.group_public_key);
+            keypairs[index].public_keys.index = shares[index].receiver_index;
+            keypairs[index].public_keys.max_participants = num_participants;
+        }
+
+        /* Clean-up temporary variables */
+        secp256k1_scalar_clear(&share_value);
+        secp256k1_gej_clear(&pubkey);
     }
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&secret);
+    secp256k1_gej_clear(&group_public_key);
+
     return 1;
 }
 
@@ -846,14 +916,14 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_group_commitment(/* out */ secp2
                                                                            uint32_t num_signers,
                                                                            const secp256k1_frost_binding_factors *binding_factors,
                                                                            const secp256k1_frost_nonce_commitment *signing_commitments) {
-    secp256k1_gej hiding_cmt, binding_cmt;
+    secp256k1_gej hiding_cmt, binding_cmt, partial;
     uint32_t index, inner_index;
+    secp256k1_ge group_commitment_ge;
 
     secp256k1_gej_set_infinity(group_commitment);
 
     for (index = 0; index < num_signers; index++) {
         secp256k1_scalar *rho_i = NULL;
-        secp256k1_gej partial;
         int found;
         const secp256k1_frost_nonce_commitment *commitment;
 
@@ -888,12 +958,16 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_group_commitment(/* out */ secp2
      * commitment) are implicitly chosen to be even.
      * Hence, if nonce_commitment y-coordinate is odd we need to negate it
     */
-    {
-        secp256k1_ge group_commitment_ge;
-        secp256k1_ge_set_gej_safe(&group_commitment_ge, group_commitment);
-        secp256k1_fe_normalize_var(&group_commitment_ge.y);
-        (*is_group_commitment_odd) = secp256k1_fe_is_odd(&group_commitment_ge.y);
-    };
+    secp256k1_ge_set_gej_safe(&group_commitment_ge, group_commitment);
+    secp256k1_fe_normalize_var(&group_commitment_ge.y);
+    (*is_group_commitment_odd) = secp256k1_fe_is_odd(&group_commitment_ge.y);
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&hiding_cmt);
+    secp256k1_gej_clear(&binding_cmt);
+    secp256k1_gej_clear(&partial);
+    secp256k1_ge_clear(&group_commitment_ge);
+
     return 1;
 }
 
@@ -939,18 +1013,24 @@ static void encode_group_commitments(
     index = 0;
     item_size = (SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
 
-    for (index = 0; index < num_signers; index++) {
+    {
         secp256k1_gej hiding_cmt, binding_cmt;
-        item = signing_commitments[index];
-        identifier_idx = item_size * index;
-        hiding_idx = SCALAR_SIZE + item_size * index;
-        binding_idx = SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + item_size * index;
 
-        serialize_scalar(item.index, &(buffer[identifier_idx]));
-        deserialize_point(&hiding_cmt, item.hiding);
-        serialize_point_xonly(&hiding_cmt, &(buffer[hiding_idx]));
-        deserialize_point(&binding_cmt, item.binding);
-        serialize_point_xonly(&binding_cmt, &(buffer[binding_idx]));
+        for (index = 0; index < num_signers; index++) {
+            item = signing_commitments[index];
+            identifier_idx = item_size * index;
+            hiding_idx = SCALAR_SIZE + item_size * index;
+            binding_idx = SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + item_size * index;
+
+            serialize_scalar(item.index, &(buffer[identifier_idx]));
+            deserialize_point(&hiding_cmt, item.hiding);
+            serialize_point_xonly(&hiding_cmt, &(buffer[hiding_idx]));
+            deserialize_point(&binding_cmt, item.binding);
+            serialize_point_xonly(&binding_cmt, &(buffer[binding_idx]));
+        }
+        /* Clean-up temporary variables */
+        secp256k1_gej_clear(&hiding_cmt);
+        secp256k1_gej_clear(&binding_cmt);
     }
 }
 
@@ -1032,25 +1112,33 @@ static SECP256K1_WARN_UNUSED_RESULT int derive_interpolating_value(/* out */ sec
     secp256k1_scalar_set_int(&num, 1);
     secp256k1_scalar_set_int(&den, 1);
 
-    for (index = 0; index < num_signers; ++index) {
+    {
         secp256k1_scalar scalar_j;
         secp256k1_scalar den_contribution;
         secp256k1_scalar scalar_signer_index, scalar_signer_index_neg;
 
-        if (all_signer_indices[index] == signer_index) {
-            continue;
+        for (index = 0; index < num_signers; ++index) {
+            if (all_signer_indices[index] == signer_index) {
+                continue;
+            }
+
+            /* num *= x_j  */
+            secp256k1_scalar_set_int(&scalar_j, all_signer_indices[index]);
+            secp256k1_scalar_mul(&num, &num, &scalar_j);
+
+            /* den *= x_j - signer_index */
+            secp256k1_scalar_set_int(&scalar_j, all_signer_indices[index]);
+            secp256k1_scalar_set_int(&scalar_signer_index, signer_index);
+            secp256k1_scalar_negate(&scalar_signer_index_neg, &scalar_signer_index);
+            secp256k1_scalar_add(&den_contribution, &scalar_j, &scalar_signer_index_neg);
+            secp256k1_scalar_mul(&den, &den, &den_contribution);
         }
 
-        /* num *= x_j  */
-        secp256k1_scalar_set_int(&scalar_j, all_signer_indices[index]);
-        secp256k1_scalar_mul(&num, &num, &scalar_j);
-
-        /* den *= x_j - signer_index */
-        secp256k1_scalar_set_int(&scalar_j, all_signer_indices[index]);
-        secp256k1_scalar_set_int(&scalar_signer_index, signer_index);
-        secp256k1_scalar_negate(&scalar_signer_index_neg, &scalar_signer_index);
-        secp256k1_scalar_add(&den_contribution, &scalar_j, &scalar_signer_index_neg);
-        secp256k1_scalar_mul(&den, &den, &den_contribution);
+        /* Clean-up temporary variables */
+        secp256k1_scalar_clear(&scalar_j);
+        secp256k1_scalar_clear(&den_contribution);
+        secp256k1_scalar_clear(&scalar_signer_index);
+        secp256k1_scalar_clear(&scalar_signer_index_neg);
     }
 
     if (secp256k1_scalar_is_zero(&den)) {
@@ -1059,6 +1147,11 @@ static SECP256K1_WARN_UNUSED_RESULT int derive_interpolating_value(/* out */ sec
 
     secp256k1_scalar_inverse(&den_inverse, &den);
     secp256k1_scalar_mul(lambda_i, &num, &den_inverse);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&num);
+    secp256k1_scalar_clear(&den);
+    secp256k1_scalar_clear(&den_inverse);
 
     return 1;
 }
@@ -1124,10 +1217,25 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
         secp256k1_scalar_mul(&adj, &adj, &c);
         secp256k1_scalar_negate(&sig_share, &sig_share);
         secp256k1_scalar_add(&sig_share, &sig_share, &adj);
+
+        /* Clean-up temporary variables */
+        secp256k1_scalar_clear(&adj);
     }
 
     secp256k1_scalar_get_b32(response->response, &sig_share);
     response->index = keypair->public_keys.index;
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&group_commitment);
+    secp256k1_gej_clear(&group_pubkey);
+    secp256k1_scalar_clear(&lambda_i);
+    secp256k1_scalar_clear(&c);
+    secp256k1_scalar_clear(&sig_share);
+    secp256k1_scalar_clear(&term1);
+    secp256k1_scalar_clear(&term2);
+    secp256k1_scalar_clear(&secret);
+    secp256k1_scalar_clear(&hiding);
+    secp256k1_scalar_clear(&binding);
 
     return 1;
 }
@@ -1226,6 +1334,7 @@ static SECP256K1_WARN_UNUSED_RESULT int is_signature_response_valid(const secp25
                                                                     const secp256k1_scalar *challenge) {
     secp256k1_gej lhs, rhs, partial;
     secp256k1_scalar cl, resp;
+    int is_valid;
 
     secp256k1_scalar_set_b32(&resp, response->response, NULL);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &lhs, &resp);
@@ -1234,7 +1343,16 @@ static SECP256K1_WARN_UNUSED_RESULT int is_signature_response_valid(const secp25
 
     secp256k1_gej_add_var(&rhs, commitment, &partial, NULL);
 
-    return secp256k1_gej_eq(&lhs, &rhs);
+    is_valid = secp256k1_gej_eq(&lhs, &rhs);
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&lhs);
+    secp256k1_gej_clear(&rhs);
+    secp256k1_gej_clear(&partial);
+    secp256k1_scalar_clear(&cl);
+    secp256k1_scalar_clear(&resp);
+
+    return is_valid;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_context *ctx,
@@ -1251,7 +1369,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
     secp256k1_scalar lambda_i;
     secp256k1_scalar *matching_rho_i = NULL;
     uint32_t index;
-    int found;
+    int found, is_valid;
 
     /* Get the binding factor by participant index of the signature share */
     found = 0;
@@ -1312,11 +1430,18 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
         secp256k1_gej_neg(&commitment_i, &commitment_i);
     }
 
-    if (is_signature_response_valid(ctx, signature_share, &signer_pubkey,
-                                    &lambda_i, &commitment_i, challenge) == 0) {
-        return 0;
-    }
-    return 1;
+    is_valid = is_signature_response_valid(ctx, signature_share, &signer_pubkey,
+                                           &lambda_i, &commitment_i, challenge);
+
+    /* Clean-up temporary variables */
+    secp256k1_gej_clear(&signer_pubkey);
+    secp256k1_gej_clear(&partial);
+    secp256k1_gej_clear(&commitment_i);
+    secp256k1_gej_clear(&hiding_cmt);
+    secp256k1_gej_clear(&binding_cmt);
+    secp256k1_scalar_clear(&lambda_i);
+
+    return is_valid;
 }
 
 SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
@@ -1384,6 +1509,11 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
                                    is_group_commitment_odd,
                                    num_signers) == 0) {
             free_binding_factors(&binding_factors);
+
+            /* Clean-up temporary variables */
+            secp256k1_scalar_clear(&challenge);
+            secp256k1_gej_clear(&group_pubkey);
+
             return 0;
         }
 
@@ -1392,10 +1522,16 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     /* Aggregate signature shares */
     secp256k1_scalar_set_int(&(aggregated_signature.z), 0);
 
-    for (index = 0; index < num_signers; index++) {
+    {
         secp256k1_scalar part_response;
-        secp256k1_scalar_set_b32(&part_response, signature_shares[index].response, NULL);
-        secp256k1_scalar_add(&(aggregated_signature.z), &(aggregated_signature.z), &part_response);
+
+        for (index = 0; index < num_signers; index++) {
+            secp256k1_scalar_set_b32(&part_response, signature_shares[index].response, NULL);
+            secp256k1_scalar_add(&(aggregated_signature.z), &(aggregated_signature.z), &part_response);
+        }
+
+        /* Clean-up temporary variables */
+        secp256k1_scalar_clear(&part_response);
     }
 
     if (is_group_commitment_odd) {
@@ -1407,6 +1543,10 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
 
     /* Free all allocated vars */
     free_binding_factors(&binding_factors);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&challenge);
+    secp256k1_gej_clear(&group_pubkey);
 
     return 1;
 }
@@ -1422,6 +1562,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_scalar challenge;
     secp256k1_gej term1, rhs, term2, term2_neg, group_pubkey;
     secp256k1_frost_signature aggregated_signature;
+    int is_valid;
 
     if (ctx == NULL || sig64 == NULL || msg32 == NULL || pubkey == NULL) {
         return 0;
@@ -1442,7 +1583,17 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_gej_neg(&term2_neg, &term2);
     secp256k1_gej_add_var(&rhs, &term1, &term2_neg, NULL);
 
-    return secp256k1_gej_eq(&(aggregated_signature.r), &rhs);
+    is_valid = secp256k1_gej_eq(&(aggregated_signature.r), &rhs);
+
+    /* Clean-up temporary variables */
+    secp256k1_scalar_clear(&challenge);
+    secp256k1_gej_clear(&term1);
+    secp256k1_gej_clear(&rhs);
+    secp256k1_gej_clear(&term2);
+    secp256k1_gej_clear(&term2_neg);
+    secp256k1_gej_clear(&group_pubkey);
+
+    return is_valid;
 }
 
 #endif /* SECP256K1_MODULE_FROST_MAIN_H */
