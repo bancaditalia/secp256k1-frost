@@ -1,4 +1,4 @@
-name: Run GCC 13 static analyzer on the code, failing on any warning
+name: Run GCC 15 static analyzer on the code, failing on any warning
 
 on:
   push:
@@ -14,9 +14,9 @@ jobs:
   # and
   #     https://github.com/actions/runner-images/issues/2307#issuecomment-1576493700
   run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
-      image: fedora:38
+      image: fedora:42
     steps:
       - name: install build dependencies
         run: |
