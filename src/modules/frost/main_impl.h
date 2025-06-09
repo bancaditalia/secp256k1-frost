@@ -232,7 +232,7 @@ static void nonce_generate(unsigned char *out32, const secp256k1_frost_keypair *
     }
     memcpy(&buffer[SCALAR_SIZE], keypair->secret, SCALAR_SIZE);
     compute_hash_h3(out32, buffer, 64);
-    memset(buffer, 0, sizeof(buffer));
+    secp256k1_memclear(buffer, sizeof(buffer));
 }
 
 static int secp256k1_frost_expand_compact_pubkey(unsigned char *pubkey64,
@@ -346,8 +346,8 @@ SECP256K1_API void secp256k1_frost_vss_commitments_destroy(secp256k1_frost_vss_c
 
     vss_commitments->index = 0;
     vss_commitments->num_coefficients = 0;
-    memset(vss_commitments->zkp_z, 0, SCALAR_SIZE);
-    memset(vss_commitments->zkp_r, 0, SERIALIZED_PUBKEY_XY_SIZE);
+    secp256k1_memclear(vss_commitments->zkp_z, SCALAR_SIZE);
+    secp256k1_memclear(vss_commitments->zkp_r, SERIALIZED_PUBKEY_XY_SIZE);
     free(vss_commitments->coefficient_commitments);
     free(vss_commitments);
 }
@@ -422,11 +422,11 @@ SECP256K1_API void secp256k1_frost_nonce_destroy(secp256k1_frost_nonce *nonce) {
         return;
     }
 
-    memset(nonce->binding, 0, SCALAR_SIZE);
-    memset(nonce->hiding, 0, SCALAR_SIZE);
+    secp256k1_memclear(nonce->binding, SCALAR_SIZE);
+    secp256k1_memclear(nonce->hiding, SCALAR_SIZE);
     nonce->commitments.index = 0;
-    memset(nonce->commitments.binding, 0, SERIALIZED_PUBKEY_XY_SIZE);
-    memset(nonce->commitments.hiding, 0, SERIALIZED_PUBKEY_XY_SIZE);
+    secp256k1_memclear(nonce->commitments.binding, SERIALIZED_PUBKEY_XY_SIZE);
+    secp256k1_memclear(nonce->commitments.hiding, SERIALIZED_PUBKEY_XY_SIZE);
     free(nonce);
 }
 
@@ -1168,8 +1168,8 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
     }
 
     /* Clean-up temporary variables */
-    memset(rho_input, 0, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
-    memset(binding_factor_hash, 0, SHA256_SIZE);
+    secp256k1_memclear(rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
+    secp256k1_memclear(binding_factor_hash, SHA256_SIZE);
 
     return 1;
 }
