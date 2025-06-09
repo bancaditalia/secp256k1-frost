@@ -654,6 +654,9 @@ static int generate_dkg_challenge(secp256k1_scalar *challenge,
     convert_b32_to_scalar(hash_value, challenge);
 
     /* cleaning out the input buffer */
+    secp256k1_memclear(hash_value, SHA256_SIZE);
+    secp256k1_memclear(&sha, sizeof(secp256k1_sha256));
+    secp256k1_memclear(challenge_input, challenge_input_length);
 
     /* Free all allocated vars */
     free(challenge_input);
@@ -1070,6 +1073,13 @@ static int compute_challenge(secp256k1_scalar *challenge,
     secp256k1_sha256_write(&sha, msg, msg_length);
     secp256k1_sha256_finalize(&sha, buf);
     secp256k1_scalar_set_b32(challenge, buf, NULL);
+
+    /* Clean-up temporary variables */
+    secp256k1_memclear(rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    secp256k1_memclear(pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+
+    /* Clean-up temporary variables */
+    secp256k1_memclear(buf, SCALAR_SIZE);
 
     return 1;
 }
