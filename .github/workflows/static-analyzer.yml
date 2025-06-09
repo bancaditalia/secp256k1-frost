@@ -42,6 +42,12 @@ jobs:
               SECP_CFLAGS="-fanalyzer -fanalyzer-transitivity -Werror" \
               --disable-tests \
               --disable-exhaustive-tests \
+              --disable-module-ecdh \
+              --disable-module-ellswift \
+              --disable-module-extrakeys \
+              --disable-module-musig \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --disable-benchmark \
               --enable-experimental \
               --enable-module-frost
