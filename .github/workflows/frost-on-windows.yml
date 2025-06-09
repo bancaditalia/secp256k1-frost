@@ -52,6 +52,9 @@ jobs:
               --disable-ctime-tests \
               --enable-examples \
               --enable-module-ecdh \
+              --enable-module-ellswift \
+              --enable-module-extrakeys \
+              --enable-module-musig \
               --enable-module-recovery \
               --enable-module-schnorrsig \
               --enable-module-frost \
@@ -79,6 +82,12 @@ jobs:
               -DSECP256K1_BUILD_TESTS=ON \
               -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
               -DSECP256K1_BUILD_BENCHMARK=OFF \
+              -DSECP256K1_ENABLE_MODULE_ECDH=ON \
+              -DSECP256K1_ENABLE_MODULE_RECOVERY=ON \
+              -DSECP256K1_ENABLE_MODULE_EXTRAKEYS=ON \
+              -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=ON \
+              -DSECP256K1_ENABLE_MODULE_MUSIG=ON \
+              -DSECP256K1_ENABLE_MODULE_ELLSWIFT=ON \
               -DSECP256K1_BUILD_EXAMPLES=ON \
               -DSECP256K1_EXPERIMENTAL=ON \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \

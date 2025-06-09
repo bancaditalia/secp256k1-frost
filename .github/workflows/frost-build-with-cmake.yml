@@ -36,6 +36,7 @@ jobs:
               -DSECP256K1_BUILD_EXAMPLES=ON \
               -DSECP256K1_EXPERIMENTAL=ON \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_ENABLE_MODULE_MUSIG=OFF \
               ..
           make -j
       - name: Run FROST example

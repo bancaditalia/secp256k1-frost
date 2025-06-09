@@ -45,6 +45,12 @@ jobs:
               --enable-tests \
               --disable-exhaustive-tests \
               --disable-benchmark \
+              --disable-module-ecdh \
+              --disable-module-ellswift \
+              --disable-module-extrakeys \
+              --disable-module-musig \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --enable-coverage \
               --enable-examples \
               --enable-experimental \
@@ -122,6 +128,12 @@ jobs:
               --disable-exhaustive-tests \
               --disable-benchmark \
               --disable-coverage \
+              --disable-module-ecdh \
+              --disable-module-ellswift \
+              --disable-module-extrakeys \
+              --disable-module-musig \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --enable-examples \
               --enable-experimental \
               --enable-module-frost
