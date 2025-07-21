@@ -130,6 +130,31 @@ if(SECP256K1_ENABLE_MODULE_FROST)
     add_compile_definitions(ENABLE_MODULE_FROST=1)
   endif()
 endif()
+
+# Generate Test Vectors
+if(SECP256K1_ENABLE_MODULE_FROST)
+  set(GENERATED_DIR ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors)
+  file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+  set(FROST_TEST_VECTOR_HEADERS
+    ${GENERATED_DIR}/bigint_test_vectors.h
+  )
+
+  add_custom_command(
+    OUTPUT ${FROST_TEST_VECTOR_HEADERS}
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/frost_generate_bigint_test_vectors.py
+      > ${GENERATED_DIR}/bigint_test_vectors.h
+    DEPENDS
+      ${CMAKE_SOURCE_DIR}/tools/frost_generate_bigint_test_vectors.py
+    COMMENT "Generating FROST test vector headers"
+    VERBATIM
+  )
+
+  add_custom_target(generate_frost_test_vectors ALL
+    DEPENDS ${FROST_TEST_VECTOR_HEADERS}
+  )
+  set(FROST_TEST_VECTOR_HEADERS ${FROST_TEST_VECTOR_HEADERS} CACHE INTERNAL "FROST generated headers")
+endif()
 # FROST_SPECIFIC - END
 
 set(SECP256K1_VALGRIND "AUTO" CACHE STRING "Build with extra checks for running inside Valgrind. [default=AUTO]")

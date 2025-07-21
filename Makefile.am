@@ -318,6 +318,20 @@ src/wycheproof/ecdh_secp256k1_test.h:
 	mkdir -p $(@D)
 	python3 $(top_srcdir)/tools/tests_wycheproof_generate_ecdh.py $(top_srcdir)/src/wycheproof/ecdh_secp256k1_test.json > $@
 
+# FROST_SPECIFIC - START
+if ENABLE_MODULE_FROST
+
+src/modules/frost/vectors/bigint_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_bigint_test_vectors.py > $@
+
+FROST_TV_DIR = src/modules/frost/vectors
+
+TESTVECTORS += \
+  $(FROST_TV_DIR)/bigint_test_vectors.h
+
+endif
+# FROST_SPECIFIC - END
+
 testvectors: $(TESTVECTORS)
 
 BUILT_SOURCES += $(TESTVECTORS)
