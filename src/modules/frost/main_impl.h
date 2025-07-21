@@ -216,7 +216,7 @@ static void nonce_generate(unsigned char *out32, const secp256k1_frost_keypair *
     if (seed32 != NULL) {
         memcpy(buffer, seed32, SCALAR_SIZE);
     }
-    memcpy(buffer + SCALAR_SIZE, keypair->secret, SCALAR_SIZE);
+    memcpy(&buffer[SCALAR_SIZE], keypair->secret, SCALAR_SIZE);
     compute_hash_h3(buffer, 64, out32);
     memset(buffer, 0, sizeof(buffer));
 }
