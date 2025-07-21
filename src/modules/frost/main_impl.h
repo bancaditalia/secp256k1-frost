@@ -7,6 +7,11 @@
 #ifndef SECP256K1_MODULE_FROST_MAIN_H
 #define SECP256K1_MODULE_FROST_MAIN_H
 
+#define SCALAR_SIZE (32U)
+#define SHA256_SIZE (32U)
+#define SERIALIZED_PUBKEY_X_ONLY_SIZE (32U)
+#define SERIALIZED_PUBKEY_XY_SIZE (64U)
+
 #include "fill_random.h"
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
@@ -15,11 +20,6 @@ static const unsigned char hash_context_prefix_h1[29] = {'F', 'R', 'O', 'S', 'T'
 static const unsigned char hash_context_prefix_h3[31] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'n', 'o', 'n', 'c', 'e'};
 static const unsigned char hash_context_prefix_h4[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'm', 's', 'g'};
 static const unsigned char hash_context_prefix_h5[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'c', 'o', 'm'};
-
-#define SCALAR_SIZE (32U)
-#define SHA256_SIZE (32U)
-#define SERIALIZED_PUBKEY_X_ONLY_SIZE (32U)
-#define SERIALIZED_PUBKEY_XY_SIZE (64U)
 
 typedef struct {
     uint32_t index;
