@@ -34,7 +34,9 @@ typedef struct {
 } secp256k1_frost_binding_factors;
 
 typedef struct {
+    /* R is the group commitment  */
     secp256k1_gej r;
+    /* Z is the aggregated signature */
     secp256k1_scalar z;
 } secp256k1_frost_signature;
 
@@ -141,6 +143,7 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(se
     return 1;
 }
 
+/* TODO: remove */
 static SECP256K1_WARN_UNUSED_RESULT int initialize_random_scalar(secp256k1_scalar *nonce) {
     /*
      * WARNING: please be aware that the security of the signature scheme
@@ -351,10 +354,6 @@ static SECP256K1_WARN_UNUSED_RESULT shamir_coefficients *shamir_coefficients_cre
 }
 
 static void shamir_coefficients_destroy(shamir_coefficients *coefficients) {
-    if (coefficients == NULL) {
-        return;
-    }
-
     coefficients->index = 0;
     coefficients->num_coefficients = 0;
     free(coefficients->coefficients);
@@ -1311,7 +1310,7 @@ SECP256K1_API int secp256k1_frost_sign(
     if (num_signers == 0 || num_signers > keypair->public_keys.max_participants) {
         return 0;
     }
-
+    /* TODO: remove this; the correct use of nonce is a developer responsibility */
     if (nonce->used == 1) {
         return 0;
     }
@@ -1348,7 +1347,6 @@ static SECP256K1_WARN_UNUSED_RESULT int check_commitment_and_response_integrity(
         const secp256k1_frost_signature_share *signature_shares,
         uint32_t num_signers) {
     uint32_t cmt_index, shr_index, cmt_found;
-    cmt_found = 0;
 
     for (shr_index = 0; shr_index < num_signers; shr_index++) {
         cmt_found = 0;
@@ -1395,7 +1393,7 @@ static SECP256K1_WARN_UNUSED_RESULT int is_signature_response_valid(const secp25
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_context *ctx,
-        /* in */ const secp256k1_frost_signature_share *signature_share,
+                                /* in */ const secp256k1_frost_signature_share *signature_share,
                                                                const secp256k1_scalar *challenge,
                                                                const secp256k1_frost_binding_factors *binding_factors,
                                                                const secp256k1_frost_nonce_commitment *commitments,
@@ -1484,7 +1482,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 }
 
 SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
-        /* out: */ unsigned char *sig64,
+                                 /* out: */ unsigned char *sig64,
                                             const unsigned char *msg,
                                             uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
