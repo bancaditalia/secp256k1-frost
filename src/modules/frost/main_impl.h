@@ -23,6 +23,33 @@
 #define FROST_DST_H4_LEN (28U)
 #define FROST_DST_H5_LEN (28U)
 
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
+    #define TWEAK_SECP256K1_GEJ(cond, point) do { \
+        if (cond == 1) { \
+            secp256k1_gej_neg(&point, &point); \
+        } \
+    } while(0)
+
+    #define TWEAK_SECP256K1_FROST_SIG_SHARE(cond, sig_share, lambda_i, secret, challenge) do { \
+        if (cond) { \
+            /* z_i' = -z_i + 2 * lambda_i * s_i * c */ \
+            secp256k1_scalar adj; \
+            secp256k1_scalar_set_int(&adj, 2); \
+            secp256k1_scalar_mul(&adj, &adj, &lambda_i); \
+            secp256k1_scalar_mul(&adj, &adj, &secret); \
+            secp256k1_scalar_mul(&adj, &adj, &challenge); \
+            secp256k1_scalar_negate(&sig_share, &sig_share); \
+            secp256k1_scalar_add(&sig_share, &sig_share, &adj); \
+            /* Clean-up temporary variables */ \
+            secp256k1_scalar_clear(&adj); \
+        } \
+    } while(0)
+#else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+#endif /* ENABLE_MODULE_FROST_BIP340_MODE */
+
 static const unsigned char frost_dst_h1[FROST_DST_H1_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'r', 'h', 'o'};
 static const unsigned char frost_dst_h2[FROST_DST_H2_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'c', 'h', 'a', 'l'};
 static const unsigned char frost_dst_h3[FROST_DST_H3_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'n', 'o', 'n', 'c', 'e'};
@@ -126,9 +153,16 @@ static void serialize_scalar(unsigned char *out32, const uint32_t value) {
 
 static int secp256k1_frost_gej_serialize_compact(unsigned char *output, const secp256k1_gej *point) {
     secp256k1_ge p;
+
+    #ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
     secp256k1_ge_set_gej_safe(&p, point);
     secp256k1_fe_normalize_var(&(p.x));
     secp256k1_fe_get_b32(output, &(p.x));
+    #else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* Clean-up temporary variables */
     secp256k1_ge_clear(&p);
@@ -1297,19 +1331,7 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
     secp256k1_scalar_add(&sig_share, &hiding, &term1);
     secp256k1_scalar_add(&sig_share, &sig_share, &term2);
 
-    if (is_group_commitment_odd) {
-        /* z_i' = -z_i + 2 * lambda_i * s_i * c */
-        secp256k1_scalar adj;
-        secp256k1_scalar_set_int(&adj, 2);
-        secp256k1_scalar_mul(&adj, &adj, &lambda_i);
-        secp256k1_scalar_mul(&adj, &adj, &secret);
-        secp256k1_scalar_mul(&adj, &adj, &c);
-        secp256k1_scalar_negate(&sig_share, &sig_share);
-        secp256k1_scalar_add(&sig_share, &sig_share, &adj);
-
-        /* Clean-up temporary variables */
-        secp256k1_scalar_clear(&adj);
-    }
+    TWEAK_SECP256K1_FROST_SIG_SHARE(is_group_commitment_odd, sig_share, lambda_i, secret, c);
 
     secp256k1_scalar_get_b32(response->response, &sig_share);
     response->index = keypair->public_keys.index;
@@ -1523,9 +1545,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
     secp256k1_gej_mul_scalar(&partial, &binding_cmt, binding_factor);
     secp256k1_gej_add_var(&comm_share, &hiding_cmt, &partial, NULL);
 
-    if (is_group_commitment_odd == 1) {
-        secp256k1_gej_neg(&comm_share, &comm_share);
-    }
+    TWEAK_SECP256K1_GEJ(is_group_commitment_odd, comm_share);
 
     is_valid = is_signature_response_valid(ctx,
                                            signature_share,

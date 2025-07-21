@@ -131,6 +131,20 @@ if(SECP256K1_ENABLE_MODULE_FROST)
   endif()
 endif()
 
+option(SECP256K1_ENABLE_MODULE_FROST_BIP340_MODE "Enable FROST module (BIP-340 mode)." ON)
+if(SECP256K1_ENABLE_MODULE_FROST_BIP340_MODE)
+  if(NOT SECP256K1_EXPERIMENTAL)
+    message(FATAL_ERROR "FROST module is experimental. Use -DSECP256K1_EXPERIMENTAL=ON to allow.")
+  else()
+    if(NOT SECP256K1_ENABLE_MODULE_FROST)
+      message(WARNING "FROST (BIP-340) mode is enabling module FROST (-DSECP256K1_ENABLE_MODULE_FROST=ON).")
+      set(SECP256K1_ENABLE_MODULE_FROST ON)
+      add_compile_definitions(ENABLE_MODULE_FROST=1)
+    endif()
+    add_compile_definitions(ENABLE_MODULE_FROST_BIP340_MODE=1)
+  endif()
+endif()
+
 # Generate Test Vectors
 if(SECP256K1_ENABLE_MODULE_FROST)
   set(GENERATED_DIR ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors)
@@ -350,6 +364,7 @@ message("  musig ............................... ${SECP256K1_ENABLE_MODULE_MUSIG
 message("  ElligatorSwift ...................... ${SECP256K1_ENABLE_MODULE_ELLSWIFT}")
 # FROST_SPECIFIC - START
 message("  FROST ............................... ${SECP256K1_ENABLE_MODULE_FROST}")
+message("  FROST (BIP-340 mode)................. ${SECP256K1_ENABLE_MODULE_FROST_BIP340_MODE}")
 # FROST_SPECIFIC - END
 message("Parameters:")
 message("  ecmult window size .................. ${SECP256K1_ECMULT_WINDOW_SIZE}")
