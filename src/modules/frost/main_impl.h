@@ -24,6 +24,32 @@
 #define FROST_DST_H4_LEN (28U)
 #define FROST_DST_H5_LEN (28U)
 
+#ifdef ENABLE_SECP256K1_FROST_EC_TWEAK
+    #define TWEAK_SECP256K1_GEJ(cond, point) do { \
+        if (cond == 1) { \
+            secp256k1_gej_neg(&point, &point); \
+        } \
+    } while(0)
+
+    #define TWEAK_SECP256K1_FROST_SIG_SHARE(cond, sig_share, lambda_i, secret, challenge) do { \
+        if (cond) { \
+            /* z_i' = -z_i + 2 * lambda_i * s_i * c */ \
+            secp256k1_scalar adj; \
+            secp256k1_scalar_set_int(&adj, 2); \
+            secp256k1_scalar_mul(&adj, &adj, &lambda_i); \
+            secp256k1_scalar_mul(&adj, &adj, &secret); \
+            secp256k1_scalar_mul(&adj, &adj, &challenge); \
+            secp256k1_scalar_negate(&sig_share, &sig_share); \
+            secp256k1_scalar_add(&sig_share, &sig_share, &adj); \
+            /* Clean-up temporary variables */ \
+            secp256k1_scalar_clear(&adj); \
+        } \
+    } while(0)
+#else
+    #define TWEAK_SECP256K1_GEJ(cond, point) (void) cond;
+    #define TWEAK_SECP256K1_FROST_SIG_SHARE(cond, sig_share, lambda_i, secret, challenge) (void) cond;
+#endif
+
 static const unsigned char frost_dst_h1[FROST_DST_H1_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'r', 'h', 'o'};
 static const unsigned char frost_dst_h2[FROST_DST_H2_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'c', 'h', 'a', 'l'};
 static const unsigned char frost_dst_h3[FROST_DST_H3_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'n', 'o', 'n', 'c', 'e'};
@@ -1197,10 +1223,8 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
         return 0;
     }
 
-    if (is_group_commitment_odd == 1) {
-        secp256k1_gej_neg(&group_commitment, &group_commitment);
-    }
-    
+    TWEAK_SECP256K1_GEJ(is_group_commitment_odd, group_commitment);
+
     /* Compute Lagrange coefficient */
     if (derive_interpolating_value(&lambda_i, keypair->public_keys.index,
                                    num_signers, bindings->participant_indexes) == 0) {
@@ -1234,19 +1258,7 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
     secp256k1_scalar_add(&sig_share, &hiding, &term1);
     secp256k1_scalar_add(&sig_share, &sig_share, &term2);
 
-    if (is_group_commitment_odd) {
-        /* z_i' = -z_i + 2 * lambda_i * s_i * c */
-        secp256k1_scalar adj;
-        secp256k1_scalar_set_int(&adj, 2);
-        secp256k1_scalar_mul(&adj, &adj, &lambda_i);
-        secp256k1_scalar_mul(&adj, &adj, &secret);
-        secp256k1_scalar_mul(&adj, &adj, &c);
-        secp256k1_scalar_negate(&sig_share, &sig_share);
-        secp256k1_scalar_add(&sig_share, &sig_share, &adj);
-
-        /* Clean-up temporary variables */
-        secp256k1_scalar_clear(&adj);
-    }
+    TWEAK_SECP256K1_FROST_SIG_SHARE(is_group_commitment_odd, sig_share, lambda_i, secret, c);
 
     secp256k1_scalar_get_b32(response->response, &sig_share);
     response->index = keypair->public_keys.index;
@@ -1450,9 +1462,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
     secp256k1_gej_mul_scalar(&partial, &binding_cmt, binding_factor);
     secp256k1_gej_add_var(&comm_share, &hiding_cmt, &partial, NULL);
 
-    if (is_group_commitment_odd == 1) {
-        secp256k1_gej_neg(&comm_share, &comm_share);
-    }
+    TWEAK_SECP256K1_GEJ(is_group_commitment_odd, comm_share);
 
     is_valid = is_signature_response_valid(ctx, signature_share, &signer_pubkey,
                                            &lambda_i, &comm_share, challenge);
@@ -1517,10 +1527,8 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
         return 0;
     }
 
-    if (is_group_commitment_odd == 1) {
-        secp256k1_gej_neg(&aggregated_signature.r, &aggregated_signature.r);
-    }
-    
+    TWEAK_SECP256K1_GEJ(is_group_commitment_odd, aggregated_signature.r);
+
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&challenge, msg, msg_length, &group_pubkey, &(aggregated_signature.r));
