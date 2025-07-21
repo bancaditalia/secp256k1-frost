@@ -143,24 +143,18 @@ static int secp256k1_frost_gej_to_b33(unsigned char *output33, const secp256k1_g
     return 1;
 }
 
-static void secp256k1_frost_signature_serialize(unsigned char *output64,
+static void secp256k1_frost_signature_serialize(unsigned char *output65,
                                                 const secp256k1_frost_signature *signature) {
-    serialize_point_xonly(&(signature->r), output64);
-    secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
+    secp256k1_frost_gej_to_b33(output65, &(signature->r));
+    secp256k1_scalar_get_b32(&output65[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], &(signature->z));
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
                                                                               const unsigned char *serialized_signature) {
-    secp256k1_fe x;
     secp256k1_ge deserialized_point;
-    if (secp256k1_fe_set_b32_limit(&x, serialized_signature) == 0) {
-        return 0;
-    }
-    if (secp256k1_ge_set_xo_var(&deserialized_point, &x, 0) == 0) {
-        return 0;
-    }
+    secp256k1_eckey_pubkey_parse(&deserialized_point, serialized_signature, 33);
     secp256k1_gej_set_ge(&(signature->r), &deserialized_point);
-    if (convert_b32_to_scalar(&serialized_signature[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z)) == 0) {
+    if (convert_b32_to_scalar(&serialized_signature[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], &(signature->z)) == 0) {
         return 0;
     }
     return 1;
@@ -1482,7 +1476,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 }
 
 SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
-                                 /* out: */ unsigned char *sig64,
+                                 /* out: */ unsigned char *sig65,
                                             const unsigned char *msg,
                                             uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
@@ -1497,7 +1491,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     int is_group_commitment_odd;
     uint32_t index;
 
-    if (ctx == NULL || sig64 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
+    if (ctx == NULL || sig65 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
         commitments == NULL || signature_shares == NULL) {
         return 0;
     }
@@ -1567,7 +1561,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     }
 
     /* Serialize aggregated signature */
-    secp256k1_frost_signature_serialize(sig64, &aggregated_signature);
+    secp256k1_frost_signature_serialize(sig65, &aggregated_signature);
 
     /* Clean-up temporary variables */
     free_binding_factors(&binding_factors);
@@ -1582,22 +1576,22 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
  * already verified using Schnorr verification */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
-        const unsigned char *sig64,
+        const unsigned char *sig65,
         const unsigned char *msg,
         uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey) {
 
     secp256k1_scalar challenge;
-    secp256k1_gej term1, rhs, term2, term2_neg, group_pubkey;
+    secp256k1_gej lhs, rhs, term1, term2, term2_neg, group_pubkey;
     secp256k1_frost_signature aggregated_signature;
     int is_valid;
 
-    if (ctx == NULL || sig64 == NULL || msg == NULL || pubkey == NULL) {
+    if (ctx == NULL || sig65 == NULL || msg == NULL || pubkey == NULL) {
         return 0;
     }
 
     /* Deserialize frost signature */
-    if (secp256k1_frost_signature_deserialize(&aggregated_signature, sig64) == 0) {
+    if (secp256k1_frost_signature_deserialize(&aggregated_signature, sig65) == 0) {
         return 0;
     }
 

@@ -349,7 +349,7 @@ SECP256K1_ARG_NONNULL(8);
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:         sig64: pointer to a 64-byte array to store the serialized signature.
+ *  Out:         sig65: pointer to a 65-byte array to store the serialized signature.
  *  In:            msg: the message being signed.
  *          msg_length: length of message being signed expressed in number of bytes.
  *             keypair: pointer to an initialized keypair.
@@ -377,7 +377,7 @@ SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8);
  *  Returns: 1: correct signature
  *           0: incorrect signature
  *  Args:    ctx: a secp256k1 context object, initialized for verification.
- *  In:    sig64: pointer to the 64-byte signature to verify.
+ *  In:    sig65: pointer to the 64-byte signature to verify.
  *           msg: the message being verified.
  *    msg_length: the length of message being verified, expressed in bytes.
  *        pubkey: pointer to (group) pubkey (cannot be NULL).
