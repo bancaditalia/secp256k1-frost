@@ -1051,69 +1051,17 @@ static void encode_group_commitments(
     uint32_t identifier_idx, hiding_idx, binding_idx;
     secp256k1_frost_nonce_commitment item;
 
-    index = 0;
-    item_size = (SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    item_size = (SCALAR_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE);
+    for (index = 0; index < num_signers; index++) {
+        item = signing_commitments[index];
+        identifier_idx = item_size * index;
+        hiding_idx = identifier_idx + SCALAR_SIZE;
+        binding_idx = hiding_idx + SERIALIZED_PUBKEY_X_PLUS_1_SIZE;
 
-    {
-        secp256k1_gej hiding_cmt, binding_cmt;
-        for (index = 0; index < num_signers; index++) {
-            item = signing_commitments[index];
-            identifier_idx = item_size * index;
-            hiding_idx = SCALAR_SIZE + item_size * index;
-            binding_idx = SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + item_size * index;
-
-            serialize_scalar(item.index, &(buffer[identifier_idx]));
-            secp256k1_frost_gej_deserialize(&hiding_cmt, item.hiding);
-            serialize_point_xonly(&hiding_cmt, &(buffer[hiding_idx]));
-            secp256k1_frost_gej_deserialize(&binding_cmt, item.binding);
-            serialize_point_xonly(&binding_cmt, &(buffer[binding_idx]));
-        }
-        /* Clean-up temporary variables */
-        secp256k1_gej_clear(&hiding_cmt);
-        secp256k1_gej_clear(&binding_cmt);
+        serialize_scalar(item.index, &buffer[identifier_idx]);
+        secp256k1_frost_pubkey_serialize(&buffer[hiding_idx], item.hiding);
+        secp256k1_frost_pubkey_serialize(&buffer[binding_idx], item.binding);
     }
-}
-
-/* TODO: H4(msg) and H5(encoded_group_commitments) is the same for each participant; move in
- * compute_binding_factors */
-static void compute_binding_factor(
-        /* out */ secp256k1_scalar *binding_factor,
-                  uint32_t index,
-                  const unsigned char *msg, uint32_t msg_len,
-                  uint32_t num_signers,
-                  const secp256k1_frost_nonce_commitment *signing_commitments) {
-
-    unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE] = {0};
-
-    /* Compute H4 of message */
-    unsigned char binding_factor_hash[SHA256_SIZE];
-    uint32_t encoded_group_commitments_size;
-    unsigned char *encoded_group_commitments;
-
-    /* unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE]; */
-    compute_hash_h4(rho_input, msg, msg_len);
-
-    encoded_group_commitments_size = num_signers * (SCALAR_SIZE +
-                                                    SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    encoded_group_commitments = (unsigned char *) checked_malloc(&default_error_callback,
-                                                                 encoded_group_commitments_size);
-    encode_group_commitments(encoded_group_commitments, num_signers, signing_commitments);
-    compute_hash_h5(&(rho_input[SHA256_SIZE]), encoded_group_commitments, encoded_group_commitments_size);
-
-    free(encoded_group_commitments);
-
-    /* rho_input = msg_hash || encoded_commitment_hash || serialize_scalar(identifier) */
-    serialize_scalar(index, &(rho_input[SHA256_SIZE + SHA256_SIZE]));
-
-    /* Compute binding factor for participant (index); binding_factor = H.H1(rho_input) */
-    compute_hash_h1(binding_factor_hash, rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
-
-    /* Convert to scalar (overflow ignored on purpose) */
-    convert_b32_to_scalar(binding_factor_hash, binding_factor);
-
-    /* Clean-up temporary variables */
-    secp256k1_memclear(rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
-    secp256k1_memclear(binding_factor_hash, SHA256_SIZE);
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
@@ -1122,24 +1070,66 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
                                   const unsigned char *msg32,
                                   uint32_t msg_len,
                                   uint32_t num_signers,
+                                  const unsigned char *group_public_key64,
                                   secp256k1_frost_nonce_commitment *signing_commitments) {
-    uint32_t index;
+    unsigned char rho_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE] = {0};
+    unsigned char binding_factor_hash[SHA256_SIZE];
+    uint32_t encoded_group_commitments_size, index;
+
     if (num_signers == 0) {
         return 0;
     }
-    binding_factors->num_binding_factors = num_signers;
+
+    /* group_public_key_enc = G.SerializeElement(group_public_key) */
+    if (secp256k1_frost_pubkey_serialize(rho_input, group_public_key64) == 0) {
+        return 0;
+    }
+
+    /* msg_hash = H4(msg) */
+    compute_hash_h4(&rho_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], msg32, msg_len);
 
     /* Note: this sorting is performed in place; but this is acceptable. */
     secp256k1_hsort(signing_commitments, num_signers, sizeof(*signing_commitments),
                     secp256k1_frost_signing_commitments_sort_cmp, (void *) ctx);
 
+    /* encoded_commitment_hash = H5(encode_group_commitment_list(commitment_list)) */
+    {
+        unsigned char *encoded_group_commitments;
+        encoded_group_commitments_size = num_signers * (SCALAR_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE
+                                                        + SERIALIZED_PUBKEY_X_PLUS_1_SIZE);
+        encoded_group_commitments = (unsigned char *) checked_malloc(&default_error_callback,
+                                                                     encoded_group_commitments_size);
+        encode_group_commitments(encoded_group_commitments, num_signers, signing_commitments);
+
+        compute_hash_h5(&(rho_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE]),
+                        encoded_group_commitments,
+                        encoded_group_commitments_size);
+        free(encoded_group_commitments);
+    }
+
+    /* At this point, rho_input_prefix = group_public_key_enc || msg_hash || encoded_commitment_hash */
+    binding_factors->num_binding_factors = num_signers;
     for (index = 0; index < num_signers; index++) {
-        compute_binding_factor(&(binding_factors->binding_factors[index]),
-                               signing_commitments[index].index, msg32, msg_len,
-                               num_signers, signing_commitments);
+        /* binding_factor_list.append((identifier, binding_factor)) */
+
+        /* rho_input = rho_input_prefix || G.SerializeScalar(identifier) */
+        memset(&(rho_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE + SHA256_SIZE]), 0, SCALAR_SIZE);
+        serialize_scalar(signing_commitments[index].index,
+                         &(rho_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE + SHA256_SIZE]));
+
+        /* Compute binding factor for participant (index): binding_factor = H1(rho_input) */
+        compute_hash_h1(binding_factor_hash, rho_input,
+                        SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
+        convert_b32_to_scalar(binding_factor_hash, &(binding_factors->binding_factors[index]));
 
         binding_factors->participant_indexes[index] = signing_commitments[index].index;
     }
+
+    /* Clean-up temporary variables */
+    secp256k1_memclear(rho_input, SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
+    secp256k1_memclear(binding_factor_hash, SHA256_SIZE);
+
+    /* return biding_factors */
 
     return 1;
 }
@@ -1330,7 +1320,8 @@ SECP256K1_API int secp256k1_frost_sign(
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
 
     /* Compute the binding factor(s) */
-    if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers, signing_commitments) == 0) {
+    if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers,
+                                keypair->public_keys.group_public_key, signing_commitments) == 0) {
         return 0;
     }
 
@@ -1501,7 +1492,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
                                             uint32_t num_signers) {
     secp256k1_frost_binding_factors binding_factors;
     secp256k1_frost_signature aggregated_signature;
-    secp256k1_scalar challenge;
+    secp256k1_scalar challenge, part_response;
     secp256k1_gej group_pubkey;
     int is_group_commitment_odd;
     uint32_t index;
@@ -1526,7 +1517,8 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
 
     /* Compute the binding factor(s) */
-    if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers, commitments) == 0) {
+    if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers,
+                                keypair->public_keys.group_public_key, commitments) == 0) {
         free_binding_factors(&binding_factors);
         return 0;
     }
@@ -1569,31 +1561,18 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
 
     /* Aggregate signature shares */
     secp256k1_scalar_set_int(&(aggregated_signature.z), 0);
-
-    {
-        secp256k1_scalar part_response;
-
-        for (index = 0; index < num_signers; index++) {
-            secp256k1_scalar_set_b32(&part_response, signature_shares[index].response, NULL);
-            secp256k1_scalar_add(&(aggregated_signature.z), &(aggregated_signature.z), &part_response);
-        }
-
-        /* Clean-up temporary variables */
-        secp256k1_scalar_clear(&part_response);
-    }
-
-    if (is_group_commitment_odd) {
-        secp256k1_gej_neg(&(aggregated_signature.r), &(aggregated_signature.r));
+    for (index = 0; index < num_signers; index++) {
+        secp256k1_scalar_set_b32(&part_response, signature_shares[index].response, NULL);
+        secp256k1_scalar_add(&(aggregated_signature.z), &(aggregated_signature.z), &part_response);
     }
 
     /* Serialize aggregated signature */
     secp256k1_frost_signature_serialize(sig64, &aggregated_signature);
 
-    /* Free all allocated vars */
-    free_binding_factors(&binding_factors);
-
     /* Clean-up temporary variables */
+    free_binding_factors(&binding_factors);
     secp256k1_scalar_clear(&challenge);
+    secp256k1_scalar_clear(&part_response);
     secp256k1_gej_clear(&group_pubkey);
 
     return 1;
