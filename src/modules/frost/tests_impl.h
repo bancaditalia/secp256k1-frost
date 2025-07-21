@@ -3219,8 +3219,12 @@ void run_frost_tests(void) {
     test_h2c_rfc9380_encode_to_curve_test_vectors();
     test_h2c_rfc9380_encode_to_curve_e2e_test_vectors();
 
+#ifndef ENABLE_MODULE_FROST_BIP340_MODE
     /* Testing FROST against official test vectors (RFC9591) */
     test_frost_rfc9591_test_vectors();
+#else
+    printf("Module FROST: Since FROST is compiled in BIP-340 mode, RFC-9591 tests are not executed\n");
+#endif
 
 }
 
