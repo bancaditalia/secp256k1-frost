@@ -119,14 +119,14 @@ static void serialize_scalar(const uint32_t value, unsigned char *ret) {
     secp256k1_scalar_clear(&value_as_scalar);
 }
 
-static void serialize_frost_signature(unsigned char *output64,
-                                      const secp256k1_frost_signature *signature) {
+static void secp256k1_frost_signature_serialize(unsigned char *output64,
+                                                const secp256k1_frost_signature *signature) {
     serialize_point_xonly(&(signature->r), output64);
     secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
 }
 
-static SECP256K1_WARN_UNUSED_RESULT int deserialize_frost_signature(secp256k1_frost_signature *signature,
-                                                                    const unsigned char *serialized_signature) {
+static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
+                                                                              const unsigned char *serialized_signature) {
     secp256k1_fe x;
     secp256k1_ge deserialized_point;
     if (secp256k1_fe_set_b32_limit(&x, serialized_signature) == 0) {
@@ -1585,7 +1585,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     }
 
     /* Serialize aggregated signature */
-    serialize_frost_signature(sig64, &aggregated_signature);
+    secp256k1_frost_signature_serialize(sig64, &aggregated_signature);
 
     /* Free all allocated vars */
     free_binding_factors(&binding_factors);
@@ -1616,7 +1616,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     }
 
     /* Deserialize frost signature */
-    if (deserialize_frost_signature(&aggregated_signature, sig64) == 0) {
+    if (secp256k1_frost_signature_deserialize(&aggregated_signature, sig64) == 0) {
         return 0;
     }
 
