@@ -1582,7 +1582,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_frost_pubkey *pubkey) {
 
     secp256k1_scalar challenge;
-    secp256k1_gej lhs, rhs, term1, term2, term2_neg, group_pubkey;
+    secp256k1_gej lhs, rhs, r_term2, term2_neg, group_pubkey;
     secp256k1_frost_signature aggregated_signature;
     int is_valid;
 
@@ -1599,19 +1599,17 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_frost_gej_deserialize(&group_pubkey, pubkey->group_public_key);
     compute_challenge(&challenge, msg, msg_length, &group_pubkey, &(aggregated_signature.r));
 
-    /* sig.r ?= (G * sig.z) - (pubkey * challenge) */
-    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &term1, &(aggregated_signature.z));
-    secp256k1_gej_mul_scalar(&term2, &group_pubkey, &challenge);
-    secp256k1_gej_neg(&term2_neg, &term2);
-    secp256k1_gej_add_var(&rhs, &term1, &term2_neg, NULL);
-
-    is_valid = secp256k1_gej_eq(&(aggregated_signature.r), &rhs);
+    /* G.ScalarBaseMult(z) == R + G.ScalarMult(PK, H2(comm_enc || pk_enc || msg)) */
+    secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &lhs, &(aggregated_signature.z));
+    secp256k1_gej_mul_scalar(&r_term2, &group_pubkey, &challenge);
+    secp256k1_gej_add_var(&rhs, &(aggregated_signature.r), &r_term2, NULL);
+    is_valid = secp256k1_gej_eq(&lhs, &rhs);
 
     /* Clean-up temporary variables */
     secp256k1_scalar_clear(&challenge);
-    secp256k1_gej_clear(&term1);
+    secp256k1_gej_clear(&lhs);
     secp256k1_gej_clear(&rhs);
-    secp256k1_gej_clear(&term2);
+    secp256k1_gej_clear(&r_term2);
     secp256k1_gej_clear(&term2_neg);
     secp256k1_gej_clear(&group_pubkey);
 
