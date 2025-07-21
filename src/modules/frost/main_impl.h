@@ -88,7 +88,7 @@ static int convert_b32_to_scalar(const unsigned char *hash_value, secp256k1_scal
     return 1;
 }
 
-static void serialize_point(unsigned char *output64, const secp256k1_gej *point) {
+static void secp256k1_frost_gej_serialize(unsigned char *output64, const secp256k1_gej *point) {
     secp256k1_ge normalized_point;
     secp256k1_ge_set_gej_safe(&normalized_point, point);
     VERIFY_CHECK(!normalized_point.infinity);
@@ -406,8 +406,8 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(const secp256k
     (nonce->commitments).index = keypair->public_keys.index;
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &binding_cmt, &binding);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &hiding_cmt, &hiding);
-    serialize_point(nonce->commitments.binding, &binding_cmt);
-    serialize_point(nonce->commitments.hiding, &hiding_cmt);
+    secp256k1_frost_gej_serialize(nonce->commitments.binding, &binding_cmt);
+    secp256k1_frost_gej_serialize(nonce->commitments.hiding, &hiding_cmt);
 
     nonce->used = 0;
 
@@ -503,14 +503,14 @@ static void vss_commit(const secp256k1_context *ctx,
 
     /* Compute the commitment of the secret term (saved as commitment[0]) */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
-    serialize_point(vss_commitments->coefficient_commitments[0].data, &coefficient_cmt);
+    secp256k1_frost_gej_serialize(vss_commitments->coefficient_commitments[0].data, &coefficient_cmt);
 
     for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
         /* Compute the commitment of each random coefficient (saved as commitment[1...]) */
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
                              &coefficient_cmt,
                              &(coefficients->coefficients[c_idx]));
-        serialize_point(vss_commitments->coefficient_commitments[c_idx + 1].data, &coefficient_cmt);
+        secp256k1_frost_gej_serialize(vss_commitments->coefficient_commitments[c_idx + 1].data, &coefficient_cmt);
     }
 
     /* Clean-up temporary variables */
@@ -715,7 +715,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     }
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &zkp_r, &r);
-    serialize_point(vss_commitments->zkp_r, &zkp_r);
+    secp256k1_frost_gej_serialize(vss_commitments->zkp_r, &zkp_r);
     generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r);
 
     /* z = r + secret * H(context, G^secret, G^r) */
@@ -832,7 +832,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     }
     secp256k1_scalar_get_b32(keypair->secret, &scalar_secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &scalar_secret);
-    serialize_point(keypair->public_keys.public_key, &pubkey);
+    secp256k1_frost_gej_serialize(keypair->public_keys.public_key, &pubkey);
 
     secp256k1_gej_set_infinity(&group_pubkey);
 
@@ -841,7 +841,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
         secp256k1_frost_gej_deserialize(&secret_commitment, commitments[c_idx]->coefficient_commitments[0].data);
         secp256k1_gej_add_var(&group_pubkey, &group_pubkey, &secret_commitment, NULL);
     }
-    serialize_point(keypair->public_keys.group_public_key, &group_pubkey);
+    secp256k1_frost_gej_serialize(keypair->public_keys.group_public_key, &group_pubkey);
     keypair->public_keys.max_participants = num_participants;
 
     /* Clean-up temporary variables */
@@ -897,9 +897,9 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
         for (index = 0; index < num_participants; index++) {
             secp256k1_scalar_set_b32(&share_value, secret_key_shares[index].value, NULL);
             secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
-            serialize_point(keypairs[index].public_keys.public_key, &pubkey);
+            secp256k1_frost_gej_serialize(keypairs[index].public_keys.public_key, &pubkey);
             memcpy(&keypairs[index].secret, &secret_key_shares[index].value, SCALAR_SIZE);
-            serialize_point(keypairs[index].public_keys.group_public_key, &group_public_key);
+            secp256k1_frost_gej_serialize(keypairs[index].public_keys.group_public_key, &group_public_key);
             keypairs[index].public_keys.index = secret_key_shares[index].receiver_index;
             keypairs[index].public_keys.max_participants = num_participants;
         }
