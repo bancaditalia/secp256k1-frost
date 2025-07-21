@@ -347,9 +347,12 @@ SECP256K1_ARG_NONNULL(8);
  *  providing a context-specific tag for domain separation. This prevents
  *  signatures from being valid in multiple contexts by accident.
  *
+ *  If FROST is compiled in BIP-340 mode, the (output) signature is a 64-byte array.
+ *  Otherwise, it is a 65-byte array.
+ *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:         sig65: pointer to a 65-byte array to store the serialized signature.
+ *  Out:         signature: pointer to a 64 or 65-byte array to store the serialized signature.
  *  In:            msg: the message being signed.
  *          msg_length: length of message being signed expressed in number of bytes.
  *             keypair: pointer to an initialized keypair.
@@ -360,7 +363,7 @@ SECP256K1_ARG_NONNULL(8);
  */
 SECP256K1_API int secp256k1_frost_aggregate(
         const secp256k1_context *ctx,
-        unsigned char *sig65,
+        unsigned char *signature,
         const unsigned char *msg,
         uint32_t msg_length,
         const secp256k1_frost_keypair *keypair,

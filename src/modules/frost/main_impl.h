@@ -24,7 +24,7 @@
 #define FROST_DST_H4_LEN (28U)
 #define FROST_DST_H5_LEN (28U)
 
-#ifdef ENABLE_SECP256K1_FROST_EC_TWEAK
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
     #define TWEAK_SECP256K1_GEJ(cond, point) do { \
         if (cond == 1) { \
             secp256k1_gej_neg(&point, &point); \
@@ -161,7 +161,38 @@ static int secp256k1_frost_gej_to_b33(unsigned char *output33, const secp256k1_g
     secp256k1_ge_clear(&p);
     return 1;
 }
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp256k1_gej *point) {
+    secp256k1_ge commitment;
+    secp256k1_ge_set_gej_safe(&commitment, point);
+    secp256k1_fe_normalize_var(&(commitment.x));
+    secp256k1_fe_get_b32(out32, &(commitment.x));
+}
+#endif
 
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+static void secp256k1_frost_signature_serialize(unsigned char *output64,
+                                                const secp256k1_frost_signature *signature) {
+    secp256k1_frost_gej_serialize_xonly(output64, &(signature->r));
+    secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
+}
+static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
+                                                                              const unsigned char *serialized_signature) {
+    secp256k1_fe x;
+    secp256k1_ge deserialized_point;
+    if (secp256k1_fe_set_b32_limit(&x, serialized_signature) == 0) {
+        return 0;
+    }
+    if (secp256k1_ge_set_xo_var(&deserialized_point, &x, 0) == 0) {
+        return 0;
+    }
+    secp256k1_gej_set_ge(&(signature->r), &deserialized_point);
+    if (convert_b32_to_scalar(&serialized_signature[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z)) == 0) {
+        return 0;
+    }
+    return 1;
+}
+#else
 static void secp256k1_frost_signature_serialize(unsigned char *output65,
                                                 const secp256k1_frost_signature *signature) {
     secp256k1_frost_gej_to_b33(output65, &(signature->r));
@@ -178,6 +209,7 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(se
     }
     return 1;
 }
+#endif
 
 /* TODO: remove */
 static SECP256K1_WARN_UNUSED_RESULT int initialize_random_scalar(secp256k1_scalar *nonce) {
@@ -640,7 +672,17 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     unsigned char *challenge_input;
     unsigned char hash_value[SHA256_SIZE];
     secp256k1_sha256 sha;
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* challenge_input = commitment || pk || index || context_nonce */
+    challenge_input_length = SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE + nonce_length;
+    challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
 
+    secp256k1_frost_gej_serialize_xonly(challenge_input, commitment);
+    secp256k1_frost_gej_serialize_xonly(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key);
+    serialize_scalar(index, &(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]));
+    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
+           context_nonce, nonce_length);
+#else
     /* challenge_input = commitment || pk || index || context_nonce */
     challenge_input_length = SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE + nonce_length;
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
@@ -650,6 +692,7 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     serialize_scalar(index, &challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE]);
     memcpy(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
+#endif
 
     /* compute hash of the challenge_input */
     secp256k1_sha256_initialize(&sha);
@@ -1035,8 +1078,40 @@ static void compute_challenge(secp256k1_scalar *challenge,
                               const unsigned char *msg, uint32_t msg_len,
                               const secp256k1_gej *group_public_key,
                               const secp256k1_gej *group_commitment) {
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    unsigned char buf[SCALAR_SIZE];
+    unsigned char rx[SERIALIZED_PUBKEY_X_ONLY_SIZE];
+    unsigned char pk[SERIALIZED_PUBKEY_X_ONLY_SIZE];
+    secp256k1_sha256 sha;
+
+    secp256k1_frost_gej_serialize_xonly(rx, group_commitment);
+    secp256k1_frost_gej_serialize_xonly(pk, group_public_key);
+
+    secp256k1_sha256_initialize(&sha);
+    sha.s[0] = 0x9cecba11ul;
+    sha.s[1] = 0x23925381ul;
+    sha.s[2] = 0x11679112ul;
+    sha.s[3] = 0xd1627e0ful;
+    sha.s[4] = 0x97c87550ul;
+    sha.s[5] = 0x003cc765ul;
+    sha.s[6] = 0x90f61164ul;
+    sha.s[7] = 0x33e9b66aul;
+    sha.bytes = 64;
+
+    secp256k1_sha256_write(&sha, rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    secp256k1_sha256_write(&sha, pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    secp256k1_sha256_write(&sha, msg, msg_len);
+    secp256k1_sha256_finalize(&sha, buf);
+    secp256k1_scalar_set_b32(challenge, buf, NULL);
+
+    /* Clean-up temporary variables */
+    secp256k1_memclear(buf, SCALAR_SIZE);
+    secp256k1_memclear(rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    secp256k1_memclear(pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+#else
     unsigned char buf[SCALAR_SIZE];
     unsigned char *challenge_input;
+
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback,
                                               SERIALIZED_PUBKEY_X_PLUS_1_SIZE
                                               + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + msg_len);
@@ -1053,6 +1128,7 @@ static void compute_challenge(secp256k1_scalar *challenge,
 
     /* Clean-up temporary variables */
     free(challenge_input);
+#endif
 }
 
 static void encode_group_commitments(
@@ -1479,7 +1555,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 }
 
 SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
-                                 /* out: */ unsigned char *sig65,
+                                 /* out: */ unsigned char *signature,
                                             const unsigned char *msg,
                                             uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
@@ -1494,7 +1570,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     int is_group_commitment_odd;
     uint32_t index;
 
-    if (ctx == NULL || sig65 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
+    if (ctx == NULL || signature == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
         commitments == NULL || signature_shares == NULL) {
         return 0;
     }
@@ -1562,7 +1638,7 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
     }
 
     /* Serialize aggregated signature */
-    secp256k1_frost_signature_serialize(sig65, &aggregated_signature);
+    secp256k1_frost_signature_serialize(signature, &aggregated_signature);
 
     /* Clean-up temporary variables */
     free_binding_factors(&binding_factors);

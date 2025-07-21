@@ -25,7 +25,11 @@ int main(void) {
     uint32_t index;
     unsigned char binding_seed[32] = {0};
     unsigned char hiding_seed[32] = {0};
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    unsigned char signature[64];
+#else
     unsigned char signature[65];
+#endif
     int is_signature_valid;
     int return_val;
 
