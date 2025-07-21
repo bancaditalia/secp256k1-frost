@@ -1197,7 +1197,8 @@ static SECP256K1_WARN_UNUSED_RESULT int derive_interpolating_value(
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
                               /* out: */ secp256k1_frost_signature_share *response,
-                                         const unsigned char *msg32,
+                                         const unsigned char *msg,
+                                         uint32_t msg_length,
                                          uint32_t num_signers,
                                          const secp256k1_frost_keypair *keypair,
                                          const secp256k1_frost_nonce *nonce,
@@ -1223,8 +1224,8 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
     /* Compute the per-message challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&c,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(group_commitment));
 
@@ -1298,7 +1299,8 @@ SECP256K1_API int secp256k1_frost_pubkey_from_keypair(secp256k1_frost_pubkey *pu
 SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_context *ctx,
         secp256k1_frost_signature_share *signature_share,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         uint32_t num_signers,
         const secp256k1_frost_keypair *keypair,
         secp256k1_frost_nonce *nonce,
@@ -1306,7 +1308,7 @@ SECP256K1_API int secp256k1_frost_sign(
 
     secp256k1_frost_binding_factors binding_factors;
 
-    if (signature_share == NULL || msg32 == NULL || keypair == NULL || nonce == NULL || signing_commitments == NULL) {
+    if (signature_share == NULL || msg == NULL || keypair == NULL || nonce == NULL || signing_commitments == NULL) {
         return 0;
     }
     if (num_signers == 0 || num_signers > keypair->public_keys.max_participants) {
@@ -1326,8 +1328,8 @@ SECP256K1_API int secp256k1_frost_sign(
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx,
                                 &binding_factors,
-                                msg32,
-                                32,
+                                msg,
+                                msg_length,
                                 num_signers,
                                 signing_commitments) == 0) {
         return 0;
@@ -1335,7 +1337,8 @@ SECP256K1_API int secp256k1_frost_sign(
 
     /* Sign the message */
     if (secp256k1_frost_sign_internal(signature_share,
-                                      msg32,
+                                      msg,
+                                      msg_length,
                                       num_signers,
                                       keypair,
                                       nonce,
@@ -1500,7 +1503,8 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 SECP256K1_API int secp256k1_frost_aggregate(
                                             const secp256k1_context *ctx,
                                  /* out: */ unsigned char *sig64,
-                                            const unsigned char *msg32,
+                                            const unsigned char *msg,
+                                            uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
                                             const secp256k1_frost_pubkey *public_keys,
                                             secp256k1_frost_nonce_commitment *commitments,
@@ -1513,7 +1517,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
     int is_group_commitment_odd;
     uint32_t index;
 
-    if (ctx == NULL || sig64 == NULL || msg32 == NULL || keypair == NULL || public_keys == NULL ||
+    if (ctx == NULL || sig64 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
         commitments == NULL || signature_shares == NULL) {
         return 0;
     }
@@ -1535,8 +1539,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx,
                                 &binding_factors,
-                                msg32,
-                                32,
+                                msg,
+                                msg_length,
                                 num_signers,
                                 commitments) == 0) {
         free_binding_factors(&binding_factors);
@@ -1556,8 +1560,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&challenge,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(aggregated_signature.r));
 
@@ -1619,7 +1623,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
         const unsigned char *sig64,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey) {
 
     secp256k1_scalar challenge;
@@ -1627,7 +1632,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_frost_signature aggregated_signature;
     int is_valid;
 
-    if (ctx == NULL || sig64 == NULL || msg32 == NULL || pubkey == NULL) {
+    if (ctx == NULL || sig64 == NULL || msg == NULL || pubkey == NULL) {
         return 0;
     }
 
@@ -1639,8 +1644,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, pubkey->group_public_key);
     compute_challenge(&challenge,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(aggregated_signature.r));
 

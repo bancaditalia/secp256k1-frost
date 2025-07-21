@@ -106,6 +106,7 @@ int main(void) {
         return_val = secp256k1_frost_sign(sign_verify_ctx,
                                           &(signature_shares[index]),
                                           msg_hash,
+                                          32,
                                           EXAMPLE_MIN_PARTICIPANTS,
                                           &keypairs[index],
                                           nonces[index],
@@ -122,6 +123,7 @@ int main(void) {
     return_val = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
                                            msg_hash,
+                                           32,
                                            &keypairs[0],
                                            public_keys,
                                            signing_commitments,
@@ -134,6 +136,7 @@ int main(void) {
     is_signature_valid = secp256k1_frost_verify(sign_verify_ctx,
                                                 signature,
                                                 msg_hash,
+                                                32,
                                                 &keypairs[0].public_keys);
 
     /* Print signature and participant keys */
