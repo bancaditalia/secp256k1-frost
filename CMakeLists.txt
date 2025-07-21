@@ -138,6 +138,7 @@ if(SECP256K1_ENABLE_MODULE_FROST)
 
   set(FROST_TEST_VECTOR_HEADERS
     ${GENERATED_DIR}/bigint_test_vectors.h
+    ${GENERATED_DIR}/ietf_frost_rfc9591_test_vectors.h
     ${GENERATED_DIR}/ietf_h2c_iso3map_test_vectors.h
     ${GENERATED_DIR}/ietf_h2c_rfc9380_expander_test_vectors.h
     ${GENERATED_DIR}/ietf_h2c_rfc9380_test_vectors.h
@@ -160,12 +161,16 @@ if(SECP256K1_ENABLE_MODULE_FROST)
       > ${GENERATED_DIR}/ietf_h2c_rfc9380_test_vectors.h
     COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/frost_generate_h2c_sqrt_ratio_test_vectors.py
       > ${GENERATED_DIR}/ietf_h2c_sqrt_ratio_test_vectors.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/frost_generate_ietf_rfc9591_test_vectors.py
+      ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.json
+      > ${GENERATED_DIR}/ietf_frost_rfc9591_test_vectors.h
     DEPENDS
       ${CMAKE_SOURCE_DIR}/tools/frost_generate_bigint_test_vectors.py
       ${CMAKE_SOURCE_DIR}/tools/frost_generate_h2c_isomap_test_vectors.py
       ${CMAKE_SOURCE_DIR}/tools/frost_generate_h2c_sqrt_ratio_test_vectors.py
       ${CMAKE_SOURCE_DIR}/tools/frost_generate_ietf_h2c_rfc9380_expander_test_vectors.py
       ${CMAKE_SOURCE_DIR}/tools/frost_generate_ietf_h2c_rfc9380_test_vectors.py
+      ${CMAKE_SOURCE_DIR}/tools/frost_generate_ietf_rfc9591_test_vectors.py
     COMMENT "Generating FROST test vector headers"
     VERBATIM
   )

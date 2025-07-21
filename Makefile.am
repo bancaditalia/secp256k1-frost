@@ -324,6 +324,9 @@ if ENABLE_MODULE_FROST
 src/modules/frost/vectors/bigint_test_vectors.h:
 	python3 $(top_srcdir)/tools/frost_generate_bigint_test_vectors.py > $@
 
+src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_ietf_rfc9591_test_vectors.py $(top_srcdir)/src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.json > $@
+
 src/modules/frost/vectors/ietf_h2c_iso3map_test_vectors.h:
 	python3 $(top_srcdir)/tools/frost_generate_h2c_isomap_test_vectors.py > $@
 
@@ -340,6 +343,7 @@ FROST_TV_DIR = src/modules/frost/vectors
 
 TESTVECTORS += \
   $(FROST_TV_DIR)/bigint_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_frost_rfc9591_test_vectors.h \
   $(FROST_TV_DIR)/ietf_h2c_iso3map_test_vectors.h \
   $(FROST_TV_DIR)/ietf_h2c_rfc9380_expander_test_vectors.h \
   $(FROST_TV_DIR)/ietf_h2c_rfc9380_test_vectors.h \
