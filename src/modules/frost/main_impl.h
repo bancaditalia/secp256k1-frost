@@ -1600,10 +1600,6 @@ SECP256K1_API int secp256k1_frost_aggregate(
         secp256k1_scalar_clear(&part_response);
     }
 
-    if (is_group_commitment_odd) {
-        secp256k1_gej_neg(&(aggregated_signature.r), &(aggregated_signature.r));
-    }
-
     /* Serialize aggregated signature */
     secp256k1_frost_signature_serialize(signature, &aggregated_signature);
 
