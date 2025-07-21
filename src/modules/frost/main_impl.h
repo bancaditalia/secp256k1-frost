@@ -109,18 +109,18 @@ static void secp256k1_frost_gej_deserialize(secp256k1_gej *output, const unsigne
     secp256k1_gej_set_ge(output, &normalized_point);
 }
 
-static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp256k1_gej *point) {
-    secp256k1_ge commitment;
-    secp256k1_ge_set_gej_safe(&commitment, point);
-    secp256k1_fe_normalize_var(&(commitment.x));
-    secp256k1_fe_get_b32(out32, &(commitment.x));
-}
-
 static void serialize_scalar(unsigned char *out32, const uint32_t value) {
     secp256k1_scalar value_as_scalar;
     secp256k1_scalar_set_int(&value_as_scalar, value);
     secp256k1_scalar_get_b32(out32, &value_as_scalar);
     secp256k1_scalar_clear(&value_as_scalar);
+}
+
+static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp256k1_gej *point) {
+    secp256k1_ge commitment;
+    secp256k1_ge_set_gej_safe(&commitment, point);
+    secp256k1_fe_normalize_var(&(commitment.x));
+    secp256k1_fe_get_b32(out32, &(commitment.x));
 }
 
 static void secp256k1_frost_signature_serialize(unsigned char *output64,
