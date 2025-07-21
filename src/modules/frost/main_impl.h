@@ -31,7 +31,6 @@ typedef struct {
     uint32_t num_binding_factors;
     uint32_t *participant_indexes;
     secp256k1_scalar *binding_factors;
-    unsigned char **binding_factors_inputs;
 } secp256k1_frost_binding_factors;
 
 typedef struct {
@@ -238,7 +237,6 @@ static int secp256k1_frost_expand_compact_pubkey(unsigned char *pubkey64,
 static void free_binding_factors(secp256k1_frost_binding_factors *binding_factors) {
     /* Free all allocated vars */
     free(binding_factors->binding_factors);
-    free(binding_factors->binding_factors_inputs);
     free(binding_factors->participant_indexes);
 }
 
@@ -1138,7 +1136,6 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
                                num_signers, signing_commitments);
 
         binding_factors->participant_indexes[index] = signing_commitments[index].index;
-        /*TODO: save rho_input in binding_factors; define an allocation strategy */
     }
 
     return 1;
@@ -1323,9 +1320,6 @@ SECP256K1_API int secp256k1_frost_sign(
             checked_malloc(&default_error_callback, num_signers * sizeof(secp256k1_scalar));
     binding_factors.participant_indexes = (uint32_t *)
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
-    binding_factors.binding_factors_inputs =
-            (unsigned char **)
-                    checked_malloc(&default_error_callback, num_signers * sizeof(unsigned char *));
 
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers, signing_commitments) == 0) {
@@ -1523,9 +1517,6 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
             checked_malloc(&default_error_callback, num_signers * sizeof(secp256k1_scalar));
     binding_factors.participant_indexes = (uint32_t *)
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
-    binding_factors.binding_factors_inputs =
-            (unsigned char **)
-                    checked_malloc(&default_error_callback, num_signers * sizeof(unsigned char *));
 
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx, &binding_factors, msg, msg_length, num_signers, commitments) == 0) {
