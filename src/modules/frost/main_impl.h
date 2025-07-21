@@ -10,6 +10,7 @@
 #define SCALAR_SIZE (32U)
 #define SHA256_SIZE (32U)
 #define SERIALIZED_PUBKEY_X_ONLY_SIZE (32U)
+#define SERIALIZED_PUBKEY_X_PLUS_1_SIZE (33U)
 #define SERIALIZED_PUBKEY_XY_SIZE (64U)
 
 #include "fill_random.h"
@@ -126,6 +127,20 @@ static void serialize_scalar(const uint32_t value, unsigned char *ret) {
     secp256k1_scalar_set_int(&value_as_scalar, value);
     secp256k1_scalar_get_b32(ret, &value_as_scalar);
     secp256k1_scalar_clear(&value_as_scalar);
+}
+
+static int secp256k1_frost_gej_to_b33(unsigned char *output33, const secp256k1_gej *point) {
+    secp256k1_ge p;
+    size_t size;
+    secp256k1_ge_set_gej_safe(&p, point);
+    if (secp256k1_eckey_pubkey_serialize(&p, output33, &size, 1) == 0) {
+        return 0;
+    }
+    if (size != 33) {
+        return 0;
+    }
+    secp256k1_ge_clear(&p);
+    return 1;
 }
 
 static void secp256k1_frost_signature_serialize(unsigned char *output64,
@@ -614,13 +629,13 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     secp256k1_sha256 sha;
 
     /* challenge_input = commitment || pk || index || context_nonce */
-    challenge_input_length = SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE + nonce_length;
+    challenge_input_length = SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE + nonce_length;
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
 
-    serialize_point_xonly(commitment, challenge_input);
-    serialize_point_xonly(public_key, &(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]));
-    serialize_scalar(index, &(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]));
-    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
+    secp256k1_frost_gej_to_b33(challenge_input, commitment);
+    secp256k1_frost_gej_to_b33(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], public_key);
+    serialize_scalar(index, &challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE]);
+    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
 
     /* compute hash of the challenge_input */
@@ -1008,34 +1023,23 @@ static void compute_challenge(secp256k1_scalar *challenge,
                               const secp256k1_gej *group_public_key,
                               const secp256k1_gej *group_commitment) {
     unsigned char buf[SCALAR_SIZE];
-    unsigned char rx[SERIALIZED_PUBKEY_X_ONLY_SIZE];
-    unsigned char pk[SERIALIZED_PUBKEY_X_ONLY_SIZE];
-    secp256k1_sha256 sha;
+    unsigned char *challenge_input;
+    challenge_input = (unsigned char *) checked_malloc(&default_error_callback,
+                                              SERIALIZED_PUBKEY_X_PLUS_1_SIZE
+                                              + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + msg_len);
 
-    serialize_point_xonly(group_commitment, rx);
-    serialize_point_xonly(group_public_key, pk);
+    /* challenge_input = group_comm_enc || group_public_key_enc || msg */
+    secp256k1_frost_gej_to_b33(challenge_input, group_commitment);
+    secp256k1_frost_gej_to_b33(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], group_public_key);
+    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE],
+           msg, msg_len);
 
-    secp256k1_sha256_initialize(&sha);
-    sha.s[0] = 0x9cecba11ul;
-    sha.s[1] = 0x23925381ul;
-    sha.s[2] = 0x11679112ul;
-    sha.s[3] = 0xd1627e0ful;
-    sha.s[4] = 0x97c87550ul;
-    sha.s[5] = 0x003cc765ul;
-    sha.s[6] = 0x90f61164ul;
-    sha.s[7] = 0x33e9b66aul;
-    sha.bytes = 64;
-
-    secp256k1_sha256_write(&sha, rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    secp256k1_sha256_write(&sha, pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, buf);
+    compute_hash_h2(buf, challenge_input,
+                    SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + msg_len);
     secp256k1_scalar_set_b32(challenge, buf, NULL);
 
     /* Clean-up temporary variables */
-    secp256k1_memclear(buf, SCALAR_SIZE);
-    secp256k1_memclear(rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    secp256k1_memclear(pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    free(challenge_input);
 }
 
 static void encode_group_commitments(
@@ -1215,6 +1219,11 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
                                  num_signers, bindings, signing_commitments) == 0) {
         return 0;
     }
+
+    if (is_group_commitment_odd == 1) {
+        secp256k1_gej_neg(&group_commitment, &group_commitment);
+    }
+    
     /* Compute Lagrange coefficient */
     if (derive_interpolating_value(&lambda_i, keypair->public_keys.index,
                                    num_signers, bindings->participant_indexes) == 0) {
@@ -1529,6 +1538,10 @@ SECP256K1_API int secp256k1_frost_aggregate(const secp256k1_context *ctx,
         return 0;
     }
 
+    if (is_group_commitment_odd == 1) {
+        secp256k1_gej_neg(&aggregated_signature.r, &aggregated_signature.r);
+    }
+    
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&challenge, msg, msg_length, &group_pubkey, &(aggregated_signature.r));
