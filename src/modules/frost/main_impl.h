@@ -13,13 +13,21 @@
 #define SERIALIZED_PUBKEY_XY_SIZE (64U)
 
 #include "fill_random.h"
+#include "hash_to_curve.h"
 #include "../../../include/secp256k1.h"
 #include "../../../include/secp256k1_frost.h"
 
-static const unsigned char hash_context_prefix_h1[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'r', 'h', 'o'};
-static const unsigned char hash_context_prefix_h3[31] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'n', 'o', 'n', 'c', 'e'};
-static const unsigned char hash_context_prefix_h4[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'm', 's', 'g'};
-static const unsigned char hash_context_prefix_h5[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'c', 'o', 'm'};
+#define FROST_DST_H1_LEN (28U)
+#define FROST_DST_H2_LEN (29U)
+#define FROST_DST_H3_LEN (30U)
+#define FROST_DST_H4_LEN (28U)
+#define FROST_DST_H5_LEN (28U)
+
+static const unsigned char frost_dst_h1[FROST_DST_H1_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'r', 'h', 'o'};
+static const unsigned char frost_dst_h2[FROST_DST_H2_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'c', 'h', 'a', 'l'};
+static const unsigned char frost_dst_h3[FROST_DST_H3_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'n', 'o', 'n', 'c', 'e'};
+static const unsigned char frost_dst_h4[FROST_DST_H4_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'm', 's', 'g'};
+static const unsigned char frost_dst_h5[FROST_DST_H5_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'c', 'o', 'm'};
 
 /* Coefficients of the random Shamir polynomial used to share a secret value */
 typedef struct {
@@ -173,53 +181,45 @@ static SECP256K1_WARN_UNUSED_RESULT int initialize_random_scalar(secp256k1_scala
 }
 
 static void compute_hash_h1(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
-    /* TODO: replace with hash-to-curve
-    * H1(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.3 using L = 48,
-    * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "rho", and prime modulus equal to Order(). */
-    secp256k1_sha256 sha;
-    secp256k1_sha256_initialize(&sha);
-    secp256k1_sha256_write(&sha, hash_context_prefix_h1, sizeof(hash_context_prefix_h1));
-    secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, out32);
+    /* H1(m): Implemented as hash_to_field(m, 1) (see [HASH-TO-CURVE], Section 5.2) using
+     *        expand_message_xmd with SHA-256 with parameters DST = contextString || "rho",
+     *        F set to the Scalar field, p set to G.Order(), m = 1, and L = 48.
+     *        https://www.rfc-editor.org/rfc/rfc9591.html#section-6.5-2.4.2.2 */
+    hash_to_scalar_field(out32, msg, msg_len, frost_dst_h1, FROST_DST_H1_LEN);
 }
 
 static void compute_hash_h2(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
-    /* TODO: replace with hash-to-curve
-    * H2(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.2 using L = 48,
-    * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "chal", and prime modulus equal to Order().*/
-    const unsigned char prefix[17] = {'B', 'I', 'P', '0', '3', '4', '0', '/', 'c', 'h', 'a', 'l', 'l', 'e', 'n', 'g', 'e'};
-    secp256k1_sha256 sha;
-    secp256k1_sha256_initialize(&sha);
-    secp256k1_sha256_write(&sha, prefix, sizeof(prefix));
-    secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, out32);
+    /* H2(m): Implemented as hash_to_field(m, 1) (see [HASH-TO-CURVE], Section 5.2) using
+     *        expand_message_xmd with SHA-256 with parameters DST = contextString || "chal",
+     *        F set to the Scalar field, p set to G.Order(), m = 1, and L = 48.
+     *        https://www.rfc-editor.org/rfc/rfc9591.html#section-6.5-2.4.2.4 */
+    hash_to_scalar_field(out32, msg, msg_len, frost_dst_h2, FROST_DST_H2_LEN);
 }
 
 static void compute_hash_h3(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
-    /* TODO: replace with hash-to-curve
-    * H3(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.2 using L = 48,
-    * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "nonce", and prime modulus equal to Order(). */
-    secp256k1_sha256 sha;
-    secp256k1_sha256_initialize(&sha);
-    secp256k1_sha256_write(&sha, hash_context_prefix_h3, sizeof(hash_context_prefix_h3));
-    secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, out32);
+    /* H3(m): Implemented as hash_to_field(m, 1) (see [HASH-TO-CURVE], Section 5.2) using
+     *        expand_message_xmd with SHA-256 with parameters DST = contextString || "nonce",
+     *        F set to the Scalar field, p set to G.Order(), m = 1, and L = 48.
+     *        https://www.rfc-editor.org/rfc/rfc9591.html#section-6.5-2.4.2.6 */
+    hash_to_scalar_field(out32, msg, msg_len, frost_dst_h3, FROST_DST_H3_LEN);
 }
 
 static void compute_hash_h4(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
-    /* H4(m): Implemented by computing H("FROST-secp256k1-SHA256-v11" || "msg" || m). */
+    /* H4(m): Implemented by computing H("FROST-secp256k1-SHA256-v1" || "msg" || m).
+     *        https://www.rfc-editor.org/rfc/rfc9591.html#section-6.5-2.4.2.8 */
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
-    secp256k1_sha256_write(&sha, hash_context_prefix_h4, sizeof(hash_context_prefix_h4));
+    secp256k1_sha256_write(&sha, frost_dst_h4, FROST_DST_H4_LEN);
     secp256k1_sha256_write(&sha, msg, msg_len);
     secp256k1_sha256_finalize(&sha, out32);
 }
 
 static void compute_hash_h5(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
-    /* H5(m): Implemented by computing H("FROST-secp256k1-SHA256-v11" || "com" || m). */
+    /* H5(m): Implemented by computing H("FROST-secp256k1-SHA256-v1" || "com" || m).
+    *        https://www.rfc-editor.org/rfc/rfc9591.html#section-6.5-2.4.2.10 */
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
-    secp256k1_sha256_write(&sha, hash_context_prefix_h5, sizeof(hash_context_prefix_h5));
+    secp256k1_sha256_write(&sha, frost_dst_h5, FROST_DST_H5_LEN);
     secp256k1_sha256_write(&sha, msg, msg_len);
     secp256k1_sha256_finalize(&sha, out32);
 }

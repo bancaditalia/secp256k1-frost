@@ -82,9 +82,9 @@ We refer to [draft v12](https://www.ietf.org/archive/id/draft-irtf-cfrg-frost-12
 
 This library only implements `FROST(secp256k1, SHA-256)`.
 - [x] Group: secp256k1
-- [ ] Hash, H1(m): requires hash-to-curve
-- [ ] Hash, H2(m): requires hash-to-curve
-- [ ] Hash, H3(m): requires hash-to-curve
+- [x] Hash, H1(m): requires hash-to-curve
+- [x] Hash, H2(m): requires hash-to-curve
+- [x] Hash, H3(m): requires hash-to-curve
 - [x] Hash, H4(m)
 - [x] Hash, H5(m)
 
