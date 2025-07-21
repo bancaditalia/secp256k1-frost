@@ -1,8 +1,9 @@
 # FROST: Flexible Round-Optimized Schnorr Threshold Signatures
 
-This module implements a threshold signature scheme based on the FROST protocol.
-FROST has been originally designed in 2020 by Chelsea Komlo and Ian Goldberg, who presented it at
-the 2020 International Conference on Selected Areas in Cryptography.
+This module implements the threshold signature scheme FROST, standardized by the IETF as [RFC-9591](https://doi.org/10.17487/RFC9591).
+
+Originally designed in 2020 by Chelsea Komlo and Ian Goldberg,
+FROST was first presented at the International Conference on Selected Areas in Cryptography:
 
 > C. Komlo and I. Goldberg, "FROST: Flexible Round-Optimized Schnorr Threshold Signatures".
 > International Conference on Selected Areas in Cryptography, 2020, Springer.
@@ -11,9 +12,16 @@ the 2020 International Conference on Selected Areas in Cryptography.
 A technical report describing the protocol with further details is available at
 the [Cryptology ePrint Archive (Paper 2020/852)](https://eprint.iacr.org/2020/852).
 
-Currently, FROST is undergoing an IETF standardization process ([status](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/)).
+The protocol was later standardized through the IETF process.
+More information is available on the [IETF Datatracker](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/) page.
 
-This module was originally developed by Bank of Italy as part of the [itcoin project](https://bancaditalia.github.io/itcoin/).
+This implementation integrates FROST into [secp256k1](https://github.com/bitcoin-core/secp256k1), 
+a cryptographic library optimized for the secp256k1 elliptic curve.
+As per [RFC-9591](https://www.rfc-editor.org/rfc/rfc9591.html#name-frostsecp256k1-sha-256), 
+the protocol is defined over this curve and uses SHA-256.
+
+The FROST module was originally developed by the Bank of Italy as part of the [itcoin project](https://bancaditalia.github.io/itcoin/).
+It now fully supports RFC 9591 and includes the official test vectors for compliance verification.
 
 ## Build
 
@@ -27,7 +35,7 @@ Run the tests:
 
     $ make check
 
-### Building with CMake (experimental) on POSIX systems
+### Building with CMake on POSIX systems
 
 To maintain a pristine source tree, CMake encourages to perform an out-of-source build by using a separate dedicated build tree.
 
@@ -49,12 +57,7 @@ Specifically, to compile the [FROST example](../../../examples/frost.c), you als
 
 ## Compliance with the IETF Standardized version of FROST
 
-FROST is an experimental module of the `secp256k1` library.
-
-The implemented version follows the design choices of the original [FROST paper](https://eprint.iacr.org/2020/852).
-Later, different versions of FROST appeared in the literature (e.g. [ROAST](https://eprint.iacr.org/2022/550)); among them, the original authors of FROST concentrated their efforts to standardize a version at the [IETF](https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/).
-
-In the long term, we would like to release an implementation of FROST fully compliant with the standard. To ease the process of development and adoption, in the following, we keep track of each function defined in the standard, indicating whether the implemented version is fully compliant or not.
+FROST is an experimental module of the secp256k1 library.
 
 ### IETF Standard
 
@@ -69,7 +72,7 @@ We refer to [draft v12](https://www.ietf.org/archive/id/draft-irtf-cfrg-frost-12
 - [x] `binding_factor_for_participant()`
 - [x] `compute_binding_factors()`
 - [x] `compute_group_commitment()`
-- [ ] `compute_challenge()`: our implementation follows BIP-340 and initializes SHA256 with fixed midstate (SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"))
+- [x] `compute_challenge()`
 
 #### Two-Round FROST Signing Protocol (Section 5 of IETF Standard)
 
@@ -106,9 +109,19 @@ by Chelsea Komlo in the prototype [FROST repository](https://git.uwaterloo.ca/ck
 
 #### Signature
 
-Our implementation follows BIP-340, which requires using x-only coordinates of points.
+- `secp256k1_frost_sign()`: produce a signature share.
+- `secp256k1_frost_aggregate()`: aggregate signature shares. Differently from the standard,
+our implementation verifies each signature share before computing the aggregated signature
+- `secp256k1_frost_verify()`: verify an aggregated signature. This is equivalent to a 
+traditional Schnorr verification (e.g., as implemented in `secp256k1_schnorrsig_verify()`)
+
+### BIP-340 Mode
+
+To retain compatibility with BIP-340, our module supports tweaking points and encoding only the x-only coordinates of points.
+This functionality is expressed by compiling the library with the flag `--enable-module-frost-bip340-mode`
+(or, the `cmake` flag `-DSECP256K1_ENABLE_MODULE_FROST_BIP340_MODE=ON`)
 
 - `secp256k1_frost_sign()`: to follow BIP-340, it adjusts the signature if the group commitment is odd
-- `secp256k1_frost_aggregate()`: differently from the standard, our implementation verifies each signature share before computing the aggregated signature
-- `secp256k1_frost_aggregate()`: to follow BIP-340, it returns the group commitment with even y coordinate
-- `secp256k1_frost_verify()`: verify an aggregated signature. This is equivalent to a traditional Schnorr verification (e.g., as implemented in `secp256k1_schnorrsig_verify()`)
+- `secp256k1_frost_aggregate()`: to follow BIP-340, it returns the group commitment with even y coordinate.
+                                In this case, the signature is a 64-byte array (instead of a 65-byte array).
+- Internally, `compute_challenge()` initializes SHA256 with fixed midstate (SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"))
