@@ -1510,7 +1510,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 
 SECP256K1_API int secp256k1_frost_aggregate(
                                             const secp256k1_context *ctx,
-                                 /* out: */ unsigned char *sig64,
+                                 /* out: */ unsigned char *signature,
                                             const unsigned char *msg,
                                             uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
@@ -1525,7 +1525,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
     int is_group_commitment_odd;
     uint32_t index;
 
-    if (ctx == NULL || sig64 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
+    if (ctx == NULL || signature == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
         commitments == NULL || signature_shares == NULL) {
         return 0;
     }
@@ -1614,7 +1614,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
     }
 
     /* Serialize aggregated signature */
-    secp256k1_frost_signature_serialize(sig64, &aggregated_signature);
+    secp256k1_frost_signature_serialize(signature, &aggregated_signature);
 
     /* Free all allocated vars */
     free_binding_factors(&binding_factors);
@@ -1630,7 +1630,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
  * already verified using Schnorr verification */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
-        const unsigned char *sig64,
+        const unsigned char *signature,
         const unsigned char *msg,
         uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey) {
@@ -1640,12 +1640,12 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_frost_signature aggregated_signature;
     int is_valid;
 
-    if (ctx == NULL || sig64 == NULL || msg == NULL || pubkey == NULL) {
+    if (ctx == NULL || signature == NULL || msg == NULL || pubkey == NULL) {
         return 0;
     }
 
     /* Deserialize frost signature */
-    if (secp256k1_frost_signature_deserialize(&aggregated_signature, sig64) == 0) {
+    if (secp256k1_frost_signature_deserialize(&aggregated_signature, signature) == 0) {
         return 0;
     }
 

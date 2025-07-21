@@ -398,7 +398,7 @@ SECP256K1_ARG_NONNULL(8);
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:         sig64: pointer to a 64-byte array for the serialized signature.
+ *  Out:     signature: pointer to a 64-byte array for the serialized signature.
  *  In:            msg: pointer to the message that was signed.
  *          msg_length: length of the message in bytes.
  *             keypair: pointer to an initialized keypair of the coordinator (group info holder).
@@ -415,7 +415,7 @@ SECP256K1_ARG_NONNULL(8);
  */
 SECP256K1_API int secp256k1_frost_aggregate(
         const secp256k1_context *ctx,
-        unsigned char *sig64,
+        unsigned char *signature,
         const unsigned char *msg,
         uint32_t msg_length,
         const secp256k1_frost_keypair *keypair,
@@ -438,14 +438,14 @@ SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8);
 
  *  Returns 1 on success (correct signature), 0 on failure (incorrect signature).
  *  Args:      ctx: pointer to a secp256k1 context object, initialized for verification.
- *  In:      sig64: pointer to a byte array holding the signature to verify.
+ *  In:  signature: pointer to a byte array holding the signature to verify.
  *             msg: pointer the message that was signed.
  *      msg_length: the length of the message in bytes.
  *          pubkey: pointer to group public key.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
-        const unsigned char *sig64,
+        const unsigned char *signature,
         const unsigned char *msg,
         uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey
