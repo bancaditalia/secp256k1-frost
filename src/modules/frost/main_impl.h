@@ -115,13 +115,6 @@ static void secp256k1_frost_gej_deserialize(secp256k1_gej *output, const unsigne
     secp256k1_gej_set_ge(output, &normalized_point);
 }
 
-static void serialize_point_xonly(const secp256k1_gej *point, unsigned char *output) {
-    secp256k1_ge commitment;
-    secp256k1_ge_set_gej_safe(&commitment, point);
-    secp256k1_fe_normalize_var(&(commitment.x));
-    secp256k1_fe_get_b32(output, &(commitment.x));
-}
-
 static void serialize_scalar(const uint32_t value, unsigned char *ret) {
     secp256k1_scalar value_as_scalar;
     secp256k1_scalar_set_int(&value_as_scalar, value);
@@ -228,7 +221,7 @@ static void nonce_generate(unsigned char *out32, const secp256k1_frost_keypair *
     if (seed32 != NULL) {
         memcpy(buffer, seed32, SCALAR_SIZE);
     }
-    memcpy(buffer + SCALAR_SIZE, keypair->secret, SCALAR_SIZE);
+    memcpy(&buffer[SCALAR_SIZE], keypair->secret, SCALAR_SIZE);
     compute_hash_h3(out32, buffer, 64);
     secp256k1_memclear(buffer, sizeof(buffer));
 }
