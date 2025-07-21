@@ -99,7 +99,7 @@ int main(void) {
          * the private signer keypair and nonce, and the public signing commitments of other participants.
          */
         return_val = secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                                          msg_hash, EXAMPLE_MIN_PARTICIPANTS,
+                                          msg_hash, 32, EXAMPLE_MIN_PARTICIPANTS,
                                           &keypairs[index], nonces[index], signing_commitments);
         assert(return_val == 1);
     }
@@ -110,14 +110,14 @@ int main(void) {
      * and aggregate all signature shares by the other participants to the signing protocol.
      * We assume participant with index = 0 is aggregating the signature shares to compute the
      * FROST signature. */
-    return_val = secp256k1_frost_aggregate(sign_verify_ctx, signature, msg_hash,
+    return_val = secp256k1_frost_aggregate(sign_verify_ctx, signature, msg_hash,  32,
                                            &keypairs[0], public_keys, signing_commitments,
                                            signature_shares, EXAMPLE_MIN_PARTICIPANTS);
     assert(return_val == 1);
 
     /*** Verification ***/
     /* Verify a signature. This will return 1 if it's valid and 0 if it's not. */
-    is_signature_valid = secp256k1_frost_verify(sign_verify_ctx, signature, msg_hash, &keypairs[0].public_keys);
+    is_signature_valid = secp256k1_frost_verify(sign_verify_ctx, signature, msg_hash, 32, &keypairs[0].public_keys);
 
     /* Print signature and participant keys */
     printf("Is the signature valid? %s\n", is_signature_valid ? "true" : "false");
