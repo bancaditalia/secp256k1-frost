@@ -10,6 +10,7 @@
 #define SCALAR_SIZE (32U)
 #define SHA256_SIZE (32U)
 #define SERIALIZED_PUBKEY_X_ONLY_SIZE (32U)
+#define SERIALIZED_PUBKEY_X_PLUS_1_SIZE (33U)
 #define SERIALIZED_PUBKEY_XY_SIZE (64U)
 
 #include "fill_random.h"
@@ -47,7 +48,8 @@
     } while(0)
 #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #define TWEAK_SECP256K1_GEJ(cond, point) (void) cond;
+    #define TWEAK_SECP256K1_FROST_SIG_SHARE(cond, sig_share, lambda_i, secret, challenge) (void) cond;
 #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
 static const unsigned char frost_dst_h1[FROST_DST_H1_LEN] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', 'r', 'h', 'o'};
@@ -152,6 +154,7 @@ static void serialize_scalar(unsigned char *out32, const uint32_t value) {
 }
 
 static int secp256k1_frost_gej_serialize_compact(unsigned char *output, const secp256k1_gej *point) {
+    /* output will be 32 bytes in BIP340 mode and 33 bytes in RFC9591 mode. */
     secp256k1_ge p;
 
     #ifdef ENABLE_MODULE_FROST_BIP340_MODE
@@ -161,7 +164,15 @@ static int secp256k1_frost_gej_serialize_compact(unsigned char *output, const se
     secp256k1_fe_get_b32(output, &(p.x));
     #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    size_t size;
+
+    secp256k1_ge_set_gej_safe(&p, point);
+    if (secp256k1_eckey_pubkey_serialize(&p, output, &size, 1) == 0) {
+        return 0;
+    }
+    if (size != 33) {
+        return 0;
+    }
     #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* Clean-up temporary variables */
@@ -696,7 +707,21 @@ static int generate_dkg_challenge(secp256k1_scalar *challenge,
            context_nonce, nonce_length);
     #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    /* challenge_input = commitment || pk || index || context_nonce */
+    challenge_input_length = SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE + nonce_length;
+    challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
+
+    if (secp256k1_frost_gej_serialize_compact(challenge_input, commitment) == 0) {
+        free(challenge_input);
+        return 0;
+    }
+    if (secp256k1_frost_gej_serialize_compact(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], public_key) == 0) {
+        free(challenge_input);
+        return 0;
+    }
+    serialize_scalar(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE], index);
+    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SCALAR_SIZE],
+           context_nonce, nonce_length);
     #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* compute hash of the challenge_input */
@@ -1136,7 +1161,33 @@ static int compute_challenge(secp256k1_scalar *challenge,
     secp256k1_memclear(pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
     #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    unsigned char *challenge_input;
+    challenge_input = (unsigned char *) checked_malloc(&default_error_callback,
+                                                       SERIALIZED_PUBKEY_X_PLUS_1_SIZE
+                                                       + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + msg_length);
+
+    /* challenge_input = group_comm_enc || group_public_key_enc || msg */
+    if (secp256k1_frost_gej_serialize_compact(challenge_input, group_commitment) == 0) {
+        /* Clean-up temporary variables */
+        free(challenge_input);
+        return 0;
+    }
+    if (secp256k1_frost_gej_serialize_compact(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], group_public_key) == 0) {
+        /* Clean-up temporary variables */
+        free(challenge_input);
+        return 0;
+    }
+    memcpy(&challenge_input[SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE],
+           msg,
+           msg_length);
+
+    compute_hash_h2(buf,
+                    challenge_input,
+                    SERIALIZED_PUBKEY_X_PLUS_1_SIZE + SERIALIZED_PUBKEY_X_PLUS_1_SIZE + msg_length);
+    secp256k1_scalar_set_b32(challenge, buf, NULL);
+
+    /* Clean-up temporary variables */
+    free(challenge_input);
     #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* Clean-up temporary variables */
