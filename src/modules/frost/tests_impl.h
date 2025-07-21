@@ -842,7 +842,7 @@ void test_secp256k1_frost_keygen_finalize_is_valid(void) {
         }
         secp256k1_ecmult_gen(&sign_ctx->ecmult_gen_ctx, &received_public, &output);
 
-        deserialize_point(&group_pubkey, keypairs[0].public_keys.group_public_key);
+        secp256k1_frost_gej_deserialize(&group_pubkey, keypairs[0].public_keys.group_public_key);
         /* ensure that the secret terms interpolate to the correct public key */
         is_equal = secp256k1_gej_eq(&received_public, &group_pubkey);
         CHECK(is_equal == 1);
@@ -1345,7 +1345,7 @@ void test_secp256k1_frost_keygen_with_single_dealer_is_valid(void) {
         }
         secp256k1_ecmult_gen(&sign_ctx->ecmult_gen_ctx, &received_public, &output);
 
-        deserialize_point(&group_pubkey, keypairs[0].public_keys.group_public_key);
+        secp256k1_frost_gej_deserialize(&group_pubkey, keypairs[0].public_keys.group_public_key);
         /* ensure that the secret terms interpolate to the correct public key */
         is_equal = secp256k1_gej_eq(&received_public, &group_pubkey);
         CHECK(is_equal == 1);
@@ -2881,7 +2881,7 @@ void test_serialize_and_deserialize_point(void) {
 
     /* Serialize and deserialize */
     serialize_point(serialized64, &point);
-    deserialize_point(&deserialized_point, serialized64);
+    secp256k1_frost_gej_deserialize(&deserialized_point, serialized64);
 
     is_equal = secp256k1_gej_eq(&point, &deserialized_point);
     CHECK(is_equal == 1);
@@ -2951,8 +2951,8 @@ void test_secp256k1_frost_pubkey_save_and_load(void) {
                                       saved_pubkey, saved_group_pubkey) == 1);
 
     /* Check equality on every field of secp256k1_frost_pubkey */
-    deserialize_point(&test_pk, loaded_pubkey.public_key);
-    deserialize_point(&test_gpk, loaded_pubkey.group_public_key);
+    secp256k1_frost_gej_deserialize(&test_pk, loaded_pubkey.public_key);
+    secp256k1_frost_gej_deserialize(&test_gpk, loaded_pubkey.group_public_key);
 
     CHECK(loaded_pubkey.index == reference_pubkey.index);
     CHECK(loaded_pubkey.max_participants == reference_pubkey.max_participants);
