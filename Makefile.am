@@ -319,6 +319,36 @@ src/wycheproof/ecdh_secp256k1_test.h:
 	mkdir -p $(@D)
 	python3 $(top_srcdir)/tools/tests_wycheproof_generate_ecdh.py $(top_srcdir)/src/wycheproof/ecdh_secp256k1_test.json > $@
 
+# FROST_SPECIFIC - START
+src/modules/frost/vectors/ietf_h2c_iso3map_test_vectors.h:
+	python3 $(top_srcdir)/tools/test_vectors_h2c_isomap_generate.py > $@ 
+
+src/modules/frost/vectors/ietf_h2c_sqrt_ratio_test_vectors.h:
+	python3 $(top_srcdir)/tools/test_vectors_h2c_sqrt_ratio_generate.py > $@ 
+
+src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.h:
+	python3 $(top_srcdir)/tools/test_vectors_ietf_frost_rfc9591_generate.py $(top_srcdir)/src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.json > $@ 
+
+src/modules/frost/vectors/ietf_h2c_rfc9380_expander_test_vectors.h:
+	python3 $(top_srcdir)/tools/test_vectors_ietf_h2c_rfc9380_expander_generate.py $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_expand_message_xmd_SHA256_38.json > $@ 
+
+src/modules/frost/vectors/ietf_h2c_rfc9380_test_vectors.h:
+	python3 $(top_srcdir)/tools/test_vectors_ietf_h2c_rfc9380_generate.py $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_ro_test_vectors.json $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_nu_test_vectors.json > $@ 
+
+if ENABLE_MODULE_FROST
+FROST_TV_DIR = src/modules/frost/vectors
+
+TESTVECTORS += \
+  $(FROST_TV_DIR)/ietf_h2c_iso3map_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_sqrt_ratio_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_frost_rfc9591_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_rfc9380_expander_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_rfc9380_test_vectors.h
+
+BUILT_SOURCES += $(TESTVECTORS)
+endif
+# FROST_SPECIFIC - END
+
 testvectors: $(TESTVECTORS)
 
 BUILT_SOURCES += $(TESTVECTORS)

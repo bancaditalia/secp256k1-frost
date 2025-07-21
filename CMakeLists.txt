@@ -130,6 +130,51 @@ if(SECP256K1_ENABLE_MODULE_FROST)
     add_compile_definitions(ENABLE_MODULE_FROST=1)
   endif()
 endif()
+
+# Generate Test Vectors
+if(SECP256K1_ENABLE_MODULE_FROST)
+  set(GENERATED_DIR ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors)
+  file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+  set(FROST_TEST_VECTOR_HEADERS
+    ${GENERATED_DIR}/ietf_h2c_iso3map_test_vectors.h
+    ${GENERATED_DIR}/ietf_h2c_sqrt_ratio_test_vectors.h
+    ${GENERATED_DIR}/ietf_frost_rfc9591_test_vectors.h
+    ${GENERATED_DIR}/ietf_h2c_rfc9380_expander_test_vectors.h
+    ${GENERATED_DIR}/ietf_h2c_rfc9380_test_vectors.h
+  )
+
+  add_custom_command(
+    OUTPUT ${FROST_TEST_VECTOR_HEADERS}
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/test_vectors_h2c_isomap_generate.py
+      > ${GENERATED_DIR}/ietf_h2c_iso3map_test_vectors.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/test_vectors_h2c_sqrt_ratio_generate.py
+      > ${GENERATED_DIR}/ietf_h2c_sqrt_ratio_test_vectors.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_frost_rfc9591_generate.py
+      ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors/ietf_frost_rfc9591_test_vectors.json
+      > ${GENERATED_DIR}/ietf_frost_rfc9591_test_vectors.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_h2c_rfc9380_expander_generate.py
+      ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors/ietf_h2c_rfc9380_expand_message_xmd_SHA256_38.json
+      > ${GENERATED_DIR}/ietf_h2c_rfc9380_expander_test_vectors.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_h2c_rfc9380_generate.py
+      ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors/ietf_h2c_rfc9380_ro_test_vectors.json
+      ${CMAKE_SOURCE_DIR}/src/modules/frost/vectors/ietf_h2c_rfc9380_nu_test_vectors.json
+      > ${GENERATED_DIR}/ietf_h2c_rfc9380_test_vectors.h
+    DEPENDS
+      ${CMAKE_SOURCE_DIR}/tools/test_vectors_h2c_isomap_generate.py
+      ${CMAKE_SOURCE_DIR}/tools/test_vectors_h2c_sqrt_ratio_generate.py
+      ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_frost_rfc9591_generate.py
+      ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_h2c_rfc9380_expander_generate.py
+      ${CMAKE_SOURCE_DIR}/tools/test_vectors_ietf_h2c_rfc9380_generate.py
+    COMMENT "Generating FROST test vector headers"
+    VERBATIM
+  )
+
+  add_custom_target(generate_frost_test_vectors ALL
+    DEPENDS ${FROST_TEST_VECTOR_HEADERS}
+  )
+  set(FROST_TEST_VECTOR_HEADERS ${FROST_TEST_VECTOR_HEADERS} CACHE INTERNAL "FROST generated headers")
+endif()
 # FROST_SPECIFIC - END
 
 set(SECP256K1_VALGRIND "AUTO" CACHE STRING "Build with extra checks for running inside Valgrind. [default=AUTO]")
