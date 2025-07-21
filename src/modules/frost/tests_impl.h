@@ -8,6 +8,7 @@
 #define SECP256K1_MODULE_FROST_TESTS_H
 
 #include "../../../include/secp256k1_frost.h"
+#include "tests_bigint.h"
 
 
 void test_secp256k1_gej_eq_case_1(void) {
@@ -3526,6 +3527,8 @@ void run_frost_tests(void) {
     /* Test overall process with different parameters */
     test_secp256k1_frost_with_larger_params_to_be_valid();
 
+    /* Testing bigint library */
+    test_reduce_bigint_mod_p();
 }
 
 #endif /* SECP256K1_MODULE_FROST_TESTS_H */
