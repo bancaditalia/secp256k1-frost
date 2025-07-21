@@ -308,17 +308,11 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
 /*
  * Create a FROST signature share.
  *
- *  This function only signs 32-byte messages. If you have messages of a
- *  different size (or the same size but without a context-specific tag
- *  prefix), it is recommended to create a 32-byte message hash with
- *  secp256k1_tagged_sha256 and then sign the hash. Tagged hashing allows
- *  providing a context-specific tag for domain separation. This prevents
- *  signatures from being valid in multiple contexts by accident.
- *
  *  Returns 1 on success, 0 on failure.
  *  Args:             ctx: pointer to a context object, initialized for signing.
  *  Out:  signature_share: pointer to the struct that will hold the signature share.
- *  In:             msg32: the 32-byte message being signed.
+ *  In:               msg: pointer to the message to be signed.
+ *             msg_length: length of the message in bytes.
  *            num_signers: number of signers
  *                keypair: pointer to an initialized keypair.
  *                  nonce: pointer to an initialized nonce.
@@ -327,30 +321,25 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
 SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_context *ctx,
         secp256k1_frost_signature_share *signature_share,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         uint32_t num_signers,
         const secp256k1_frost_keypair *keypair,
         secp256k1_frost_nonce *nonce,
         secp256k1_frost_nonce_commitment *signing_commitments
-) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6)
-SECP256K1_ARG_NONNULL(7);
+) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7)
+SECP256K1_ARG_NONNULL(8);
 
 /*
  * Combine FROST signature shares to obtain an aggregated signature.
  *
- *  This function combines signature shares of 32-byte messages. If you have
- *  messages of a different size (or the same size but without a context-specific
- *  tag prefix), it is recommended to create a 32-byte message hash with
- *  secp256k1_tagged_sha256 and then sign the hash. Tagged hashing allows
- *  providing a context-specific tag for domain separation. This prevents
- *  signatures from being valid in multiple contexts by accident.
- *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
  *  Out:         sig64: pointer to a 64-byte array to store the serialized signature.
- *  In:          msg32: the 32-byte message being signed.
+ *  In:            msg: pointer to the message that was signed.
+ *          msg_length: length of the message in bytes.
  *             keypair: pointer to an initialized keypair.
- *         public_keys: pointer to an array of public keys of signers.
+ *         public_keys: pointer to an array of public keys of (actual) signers.
  *         commitments: pointer to an array of commitments.
  *    signature_shares: pointer to an array of signature shares.
  *         num_signers: number of signers.
@@ -358,14 +347,15 @@ SECP256K1_ARG_NONNULL(7);
 SECP256K1_API int secp256k1_frost_aggregate(
         const secp256k1_context *ctx,
         unsigned char *sig64,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         const secp256k1_frost_keypair *keypair,
         const secp256k1_frost_pubkey *public_keys,
         secp256k1_frost_nonce_commitment *commitments,
         const secp256k1_frost_signature_share *signature_shares,
         uint32_t num_signers
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4)
-SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7);
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5)
+SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8);
 
 /*
  * Verify a FROST aggregated signature.
@@ -374,15 +364,17 @@ SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7);
  *           0: incorrect signature
  *  Args:    ctx: a secp256k1 context object, initialized for verification.
  *  In:    sig64: pointer to the 64-byte signature to verify.
- *         msg32: the 32-byte length message being verified.
+ *           msg: pointer the message that was signed.
+ *    msg_length: the length of the message in bytes.
  *        pubkey: pointer to (group) pubkey (cannot be NULL).
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
         const unsigned char *sig64,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey
-) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(4);
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5);
 
 #ifdef __cplusplus
 }

@@ -1011,7 +1011,7 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_group_commitment(
 
 static void compute_challenge(secp256k1_scalar *challenge,
                               const unsigned char *msg,
-                              uint32_t msg_len,
+                              uint32_t msg_length,
                               const secp256k1_gej *group_public_key,
                               const secp256k1_gej *group_commitment) {
     unsigned char buf[SCALAR_SIZE];
@@ -1035,7 +1035,7 @@ static void compute_challenge(secp256k1_scalar *challenge,
 
     secp256k1_sha256_write(&sha, rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
     secp256k1_sha256_write(&sha, pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    secp256k1_sha256_write(&sha, msg, msg_len);
+    secp256k1_sha256_write(&sha, msg, msg_length);
     secp256k1_sha256_finalize(&sha, buf);
     secp256k1_scalar_set_b32(challenge, buf, NULL);
 }
@@ -1079,7 +1079,7 @@ static void compute_binding_factor(
         /* out */ secp256k1_scalar *binding_factor,
                   uint32_t index,
                   const unsigned char *msg,
-                  uint32_t msg_len,
+                  uint32_t msg_length,
                   uint32_t num_signers,
                   const secp256k1_frost_nonce_commitment *signing_commitments) {
 
@@ -1091,7 +1091,7 @@ static void compute_binding_factor(
     unsigned char *encoded_group_commitments;
 
     /* unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE]; */
-    compute_hash_h4(rho_input, msg, msg_len);
+    compute_hash_h4(rho_input, msg, msg_length);
 
     encoded_group_commitments_size = num_signers * (SCALAR_SIZE +
                                                     SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
@@ -1115,8 +1115,8 @@ static void compute_binding_factor(
 static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
                                   const secp256k1_context *ctx,
                         /* out */ secp256k1_frost_binding_factors *binding_factors,
-                                  const unsigned char *msg32,
-                                  uint32_t msg_len,
+                                  const unsigned char *msg,
+                                  uint32_t msg_length,
                                   uint32_t num_signers,
                                   secp256k1_frost_nonce_commitment *signing_commitments) {
     uint32_t index;
@@ -1132,8 +1132,8 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
     for (index = 0; index < num_signers; index++) {
         compute_binding_factor(&(binding_factors->binding_factors[index]),
                                signing_commitments[index].index,
-                               msg32,
-                               msg_len,
+                               msg,
+                               msg_length,
                                num_signers,
                                signing_commitments);
 
@@ -1201,7 +1201,8 @@ static SECP256K1_WARN_UNUSED_RESULT int derive_interpolating_value(
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
                               /* out: */ secp256k1_frost_signature_share *response,
-                                         const unsigned char *msg32,
+                                         const unsigned char *msg,
+                                         uint32_t msg_length,
                                          uint32_t num_signers,
                                          const secp256k1_frost_keypair *keypair,
                                          const secp256k1_frost_nonce *nonce,
@@ -1227,8 +1228,8 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
     /* Compute the per-message challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&c,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(group_commitment));
 
@@ -1302,7 +1303,8 @@ SECP256K1_API int secp256k1_frost_pubkey_from_keypair(secp256k1_frost_pubkey *pu
 SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_context *ctx,
         secp256k1_frost_signature_share *signature_share,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         uint32_t num_signers,
         const secp256k1_frost_keypair *keypair,
         secp256k1_frost_nonce *nonce,
@@ -1310,7 +1312,7 @@ SECP256K1_API int secp256k1_frost_sign(
 
     secp256k1_frost_binding_factors binding_factors;
 
-    if (signature_share == NULL || msg32 == NULL || keypair == NULL || nonce == NULL || signing_commitments == NULL) {
+    if (signature_share == NULL || msg == NULL || keypair == NULL || nonce == NULL || signing_commitments == NULL) {
         return 0;
     }
     if (num_signers == 0 || num_signers > keypair->public_keys.max_participants) {
@@ -1330,8 +1332,8 @@ SECP256K1_API int secp256k1_frost_sign(
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx,
                                 &binding_factors,
-                                msg32,
-                                32,
+                                msg,
+                                msg_length,
                                 num_signers,
                                 signing_commitments) == 0) {
         return 0;
@@ -1339,7 +1341,8 @@ SECP256K1_API int secp256k1_frost_sign(
 
     /* Sign the message */
     if (secp256k1_frost_sign_internal(signature_share,
-                                      msg32,
+                                      msg,
+                                      msg_length,
                                       num_signers,
                                       keypair,
                                       nonce,
@@ -1504,7 +1507,8 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
 SECP256K1_API int secp256k1_frost_aggregate(
                                             const secp256k1_context *ctx,
                                  /* out: */ unsigned char *sig64,
-                                            const unsigned char *msg32,
+                                            const unsigned char *msg,
+                                            uint32_t msg_length,
                                             const secp256k1_frost_keypair *keypair,
                                             const secp256k1_frost_pubkey *public_keys,
                                             secp256k1_frost_nonce_commitment *commitments,
@@ -1517,7 +1521,7 @@ SECP256K1_API int secp256k1_frost_aggregate(
     int is_group_commitment_odd;
     uint32_t index;
 
-    if (ctx == NULL || sig64 == NULL || msg32 == NULL || keypair == NULL || public_keys == NULL ||
+    if (ctx == NULL || sig64 == NULL || msg == NULL || keypair == NULL || public_keys == NULL ||
         commitments == NULL || signature_shares == NULL) {
         return 0;
     }
@@ -1539,8 +1543,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
     /* Compute the binding factor(s) */
     if (compute_binding_factors(ctx,
                                 &binding_factors,
-                                msg32,
-                                32,
+                                msg,
+                                msg_length,
                                 num_signers,
                                 commitments) == 0) {
         free_binding_factors(&binding_factors);
@@ -1560,8 +1564,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
     compute_challenge(&challenge,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(aggregated_signature.r));
 
@@ -1623,7 +1627,8 @@ SECP256K1_API int secp256k1_frost_aggregate(
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
         const unsigned char *sig64,
-        const unsigned char *msg32,
+        const unsigned char *msg,
+        uint32_t msg_length,
         const secp256k1_frost_pubkey *pubkey) {
 
     secp256k1_scalar challenge;
@@ -1631,7 +1636,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     secp256k1_frost_signature aggregated_signature;
     int is_valid;
 
-    if (ctx == NULL || sig64 == NULL || msg32 == NULL || pubkey == NULL) {
+    if (ctx == NULL || sig64 == NULL || msg == NULL || pubkey == NULL) {
         return 0;
     }
 
@@ -1643,8 +1648,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, pubkey->group_public_key);
     compute_challenge(&challenge,
-                      msg32,
-                      32,
+                      msg,
+                      msg_length,
                       &group_pubkey,
                       &(aggregated_signature.r));
 

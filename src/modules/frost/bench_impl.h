@@ -46,6 +46,7 @@ static void bench_frost_sign(void* arg, int iters) {
         CHECK(secp256k1_frost_sign(data->ctx,
                                    &signature_share,
                                    data->msgs[i],
+                                   BENCH_FROST_MSGLEN,
                                    BENCH_FROST_THR_PARTICIPANTS,
                                    &data->state[i].keypairs[signer_index],
                                    data->state[i].nonces[signer_index],
@@ -64,6 +65,7 @@ static void bench_frost_aggregate(void* arg, int iters) {
         CHECK(secp256k1_frost_aggregate(data->ctx,
                                         signature,
                                         data->msgs[i],
+                                        BENCH_FROST_MSGLEN,
                                         &data->state[i].keypairs[signer_index],
                                         data->state[i].public_keys,
                                         data->state[i].signing_commitments,
@@ -80,6 +82,7 @@ static void bench_frost_verify(void* arg, int iters) {
         CHECK(secp256k1_frost_verify(data->ctx,
                                      data->state[i].signature,
                                      data->msgs[i],
+                                     BENCH_FROST_MSGLEN,
                                      data->state[i].public_keys) == 1);
     }
 }
@@ -146,6 +149,7 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
             CHECK(secp256k1_frost_sign(data->ctx,
                                        &data->state[i].signature_shares[j],
                                        data->msgs[i],
+                                       BENCH_FROST_MSGLEN,
                                        BENCH_FROST_THR_PARTICIPANTS,
                                        &data->state[i].keypairs[j],
                                        data->state[i].nonces[j],
@@ -159,6 +163,7 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
         CHECK(secp256k1_frost_aggregate(data->ctx,
                                         data->state[i].signature,
                                         data->msgs[i],
+                                        BENCH_FROST_MSGLEN,
                                         &data->state[i].keypairs[0],
                                         data->state[i].public_keys,
                                         data->state[i].signing_commitments,
