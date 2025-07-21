@@ -191,7 +191,7 @@ static int secp256k1_frost_signature_serialize(unsigned char *output,
     secp256k1_scalar_get_b32(&output[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
     #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    secp256k1_scalar_get_b32(&output[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], &(signature->z));
     #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     return 1;
@@ -216,7 +216,11 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(se
     }
     #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    secp256k1_eckey_pubkey_parse(&deserialized_point, serialized_signature, 33);
+    secp256k1_gej_set_ge(&(signature->r), &deserialized_point);
+    if (convert_b32_to_scalar(&serialized_signature[SERIALIZED_PUBKEY_X_PLUS_1_SIZE], &(signature->z)) == 0) {
+        return 0;
+    }
     #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
     return 1;
 }

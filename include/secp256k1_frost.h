@@ -58,7 +58,7 @@ extern "C" {
     #define FROST_SIGNATURE_SIZE   (64)
 #else
     /* RFC9591 mode */
-    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #define FROST_SIGNATURE_SIZE   (65)
 #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
 /* Share of the group secret key.
@@ -404,9 +404,13 @@ SECP256K1_ARG_NONNULL(8);
  * aggregates them into a final signature (R, z), as defined in RFC 9591 §5.3.
  *      https://www.rfc-editor.org/rfc/rfc9591#name-signature-share-aggregation
  *
+ * The signature size is defined in FROST_SIGNATURE_SIZE: when FROST is compiled
+ * in BIP-340 mode, the signature size is 64 bytes. When it is compiled in
+ * RFC9591 mode, it is 65 bytes.
+ *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:     signature: pointer to a 64-byte array for the serialized signature.
+ *  Out:     signature: pointer to a FROST_SIGNATURE_SIZE-bytes array for the serialized signature.
  *  In:            msg: pointer to the message that was signed.
  *          msg_length: length of the message in bytes.
  *             keypair: pointer to an initialized keypair of the coordinator (group info holder).
