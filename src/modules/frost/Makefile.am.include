@@ -1,4 +1,6 @@
 include_HEADERS += include/secp256k1_frost.h
 noinst_HEADERS += src/modules/frost/bench_impl.h
+noinst_HEADERS += src/modules/frost/bigint.h
 noinst_HEADERS += src/modules/frost/main_impl.h
+noinst_HEADERS += src/modules/frost/tests_bigint.h
 noinst_HEADERS += src/modules/frost/tests_impl.h
