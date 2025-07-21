@@ -34,7 +34,9 @@ typedef struct {
 } secp256k1_frost_binding_factors;
 
 typedef struct {
+    /* R is the group commitment  */
     secp256k1_gej r;
+    /* Z is the aggregated signature */
     secp256k1_scalar z;
 } secp256k1_frost_signature;
 
@@ -141,6 +143,7 @@ static SECP256K1_WARN_UNUSED_RESULT int deserialize_frost_signature(secp256k1_fr
     return 1;
 }
 
+/* TODO: remove */
 static SECP256K1_WARN_UNUSED_RESULT int initialize_random_scalar(secp256k1_scalar *nonce) {
     /*
      * WARNING: please be aware that the security of the signature scheme
@@ -1263,6 +1266,7 @@ SECP256K1_API int secp256k1_frost_sign(
         return 0;
     }
 
+    /* TODO: remove this; the correct use of nonce is a developer responsibility */
     if (nonce->used == 1) {
         return 0;
     }
