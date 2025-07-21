@@ -1923,7 +1923,7 @@ void test_secp256k1_frost_with_larger_params_to_be_valid(void) {
     }
 
     for (index = 0; index < threshold_signers; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
@@ -2007,7 +2007,7 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
     }
 
     for (index = 0; index < num_participants; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
@@ -2035,7 +2035,7 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
 
 void test_secp256k1_frost_aggregate_null_secp_context(void) {
     secp256k1_context *sign_ctx = NULL;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
     secp256k1_frost_keypair keypair;
     secp256k1_frost_pubkey public_keys[3];
@@ -2092,7 +2092,7 @@ void test_secp256k1_frost_aggregate_null_signature(void) {
 
 void test_secp256k1_frost_aggregate_null_message(void) {
     secp256k1_context *sign_ctx;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char *msg32 = NULL;
     secp256k1_frost_keypair keypair;
     secp256k1_frost_pubkey public_keys[3];
@@ -2123,7 +2123,7 @@ void test_secp256k1_frost_aggregate_null_message(void) {
 
 void test_secp256k1_frost_aggregate_null_keypair(void) {
     secp256k1_context *sign_ctx;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
     secp256k1_frost_keypair *keypair = NULL;
     secp256k1_frost_pubkey public_keys[3];
@@ -2153,7 +2153,7 @@ void test_secp256k1_frost_aggregate_null_keypair(void) {
 
 void test_secp256k1_frost_aggregate_null_pubkeys(void) {
     secp256k1_context *sign_ctx;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
     secp256k1_frost_keypair keypair;
     secp256k1_frost_pubkey *public_keys = NULL;
@@ -2183,7 +2183,7 @@ void test_secp256k1_frost_aggregate_null_pubkeys(void) {
 
 void test_secp256k1_frost_aggregate_null_signing_commitments(void) {
     secp256k1_context *sign_ctx;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
     secp256k1_frost_keypair keypair;
     secp256k1_frost_pubkey public_keys[3];
@@ -2213,7 +2213,7 @@ void test_secp256k1_frost_aggregate_null_signing_commitments(void) {
 
 void test_secp256k1_frost_aggregate_null_signature_shares(void) {
     secp256k1_context *sign_ctx;
-    unsigned char signature[64];
+    unsigned char signature[65];
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
     secp256k1_frost_keypair keypair;
     secp256k1_frost_pubkey public_keys[3];
@@ -2295,7 +2295,7 @@ void test_secp256k1_frost_aggregate_with_more_participants_than_max_to_be_invali
     }
 
     for (index = 0; index < num_participants; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
@@ -2378,7 +2378,7 @@ void test_secp256k1_frost_aggregate_with_few_signature_share_to_be_invalid(void)
         num_signature_share_to_consider = 1;
 
         for (index = 0; index < threshold_signers; index++) {
-            unsigned char signature[64];
+            unsigned char signature[65];
             /* Step 4: aggregate signature shares */
             result = secp256k1_frost_aggregate(sign_ctx,
                                                signature,
@@ -2459,7 +2459,7 @@ void test_secp256k1_frost_aggregate_with_invalid_signature_share_to_be_invalid(v
     memcpy(signature_shares[0].response, msg32, 32);
 
     for (index = 0; index < threshold_signers; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_ctx,
                                            signature,
@@ -2536,7 +2536,7 @@ void test_secp256k1_frost_aggregate_with_invalid_group_key_to_be_invalid(void) {
     }
 
     for (index = 0; index < threshold_signers; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         memset(keypairs[index].public_keys.group_public_key, 0, 64);
         result = secp256k1_frost_aggregate(sign_ctx,
@@ -2614,7 +2614,7 @@ void test_secp256k1_frost_verify_with_invalid_group_key_to_be_invalid(void) {
     }
 
     for (index = 0; index < threshold_signers; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
@@ -2727,7 +2727,7 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_to_be_valid(void) {
     }
 
     for (index = 0; index < num_participants; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
                                            msg32, 32, &keypairs[index],
@@ -2839,7 +2839,7 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_more_parts_to_be_valid(void)
     }
 
     for (index = 0; index < threshold; index++) {
-        unsigned char signature[64];
+        unsigned char signature[65];
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
                                            msg32, 32, &keypairs[index],
@@ -2894,7 +2894,7 @@ void test_serialize_and_deserialize_point(void) {
  * Test serialize and deserialize functions for frost_signature.
  */
 void test_serialize_and_deserialize_frost_signature(void) {
-    unsigned char serialized64[64];
+    unsigned char serialized65[65];
     secp256k1_frost_signature signature;
     secp256k1_frost_signature deserialized_signature;
     secp256k1_context *test_ctx;
@@ -2906,8 +2906,8 @@ void test_serialize_and_deserialize_frost_signature(void) {
     secp256k1_ecmult_gen(&test_ctx->ecmult_gen_ctx, &(signature.r), &(signature.z));
 
     /* Serialize and deserialize */
-    secp256k1_frost_signature_serialize(serialized64, &signature);
-    CHECK(secp256k1_frost_signature_deserialize(&deserialized_signature, serialized64) == 1);
+    secp256k1_frost_signature_serialize(serialized65, &signature);
+    CHECK(secp256k1_frost_signature_deserialize(&deserialized_signature, serialized65) == 1);
 
     is_equal = secp256k1_gej_eq(&(signature.r), &(deserialized_signature.r));
     CHECK(is_equal == 1);
@@ -2972,7 +2972,7 @@ void test_secp256k1_frost_verify_to_be_valid(void) {
     secp256k1_context *test_ctx;
     int result;
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
-    unsigned char serialized64[64];
+    unsigned char serialized_signature[65];
     secp256k1_frost_signature signature;
     secp256k1_frost_keypair keypair;
 
@@ -2986,11 +2986,11 @@ void test_secp256k1_frost_verify_to_be_valid(void) {
     secp256k1_scalar_mul(&(signature.z), &private_key, &challenge);
     secp256k1_scalar_add(&(signature.z), &nonce, &(signature.z));
 
-    secp256k1_frost_signature_serialize(serialized64, &signature);
+    secp256k1_frost_signature_serialize(serialized_signature, &signature);
     secp256k1_frost_gej_serialize(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     &keypair.public_keys);
     CHECK(result == 1);
@@ -3002,12 +3002,12 @@ void test_secp256k1_frost_verify_null_secp_context(void) {
     secp256k1_context *test_ctx = NULL;
     int result;
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
-    unsigned char serialized64[64] = {0};
+    unsigned char serialized_signature[65] = {0};
     secp256k1_frost_pubkey pubkey;
 
     memset(&pubkey, 0, sizeof(secp256k1_frost_pubkey));
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     &pubkey);
     CHECK(result == 0);
@@ -3017,13 +3017,13 @@ void test_secp256k1_frost_verify_null_signature(void) {
     secp256k1_context *test_ctx;
     int result;
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
-    unsigned char *serialized64 = NULL;
+    unsigned char *serialized_signature = NULL;
     secp256k1_frost_pubkey pubkey;
 
     test_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     memset(&pubkey, 0, sizeof(secp256k1_frost_pubkey));
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     &pubkey);
     CHECK(result == 0);
@@ -3035,13 +3035,13 @@ void test_secp256k1_frost_verify_null_message(void) {
     secp256k1_context *test_ctx;
     int result;
     const unsigned char *msg32 = NULL;
-    unsigned char serialized64[64] = {0};
+    unsigned char serialized_signature[65] = {0};
     secp256k1_frost_pubkey pubkey;
 
     test_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     memset(&pubkey, 0, sizeof(secp256k1_frost_pubkey));
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     &pubkey);
     CHECK(result == 0);
@@ -3053,12 +3053,12 @@ void test_secp256k1_frost_verify_null_pubkey(void) {
     secp256k1_context *test_ctx;
     int result;
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
-    unsigned char serialized64[64] = {0};
+    unsigned char serialized_signature[65] = {0};
     secp256k1_frost_pubkey *pubkey = NULL;
 
     test_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     pubkey);
     CHECK(result == 0);
@@ -3075,7 +3075,7 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_context *test_ctx;
     int result;
     const unsigned char msg32[32] = {'z', 's', 'd', 'W', '0', 't', 'L', '5', 'j', 'v', '9', 'd', '1', 'S', 'Z', 's', 'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w', 'W', 'X', '7', 'n', '6', 'r', 'g', 'g'};
-    unsigned char serialized64[64];
+    unsigned char serialized_signature[65];
     secp256k1_frost_signature signature;
     secp256k1_frost_keypair keypair;
 
@@ -3091,11 +3091,11 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_scalar_set_int(&invalid_nonce, 100);
     secp256k1_scalar_add(&(signature.z), &invalid_nonce, &(signature.z));
 
-    secp256k1_frost_signature_serialize(serialized64, &signature);
+    secp256k1_frost_signature_serialize(serialized_signature, &signature);
     secp256k1_frost_gej_serialize(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,
-                                    serialized64,
+                                    serialized_signature,
                                     msg32, 32,
                                     &keypair.public_keys);
     CHECK(result == 0);
