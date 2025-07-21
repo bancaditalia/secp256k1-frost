@@ -10,6 +10,7 @@
 #include "../../../include/secp256k1_frost.h"
 #include "hash_to_curve.h"
 #include "tests_h2c_rfc9380.h"
+#include "tests_frost_rfc9591.h"
 
 void test_secp256k1_gej_eq_case_1(void) {
     secp256k1_gej a, b;
@@ -3217,6 +3218,9 @@ void run_frost_tests(void) {
     test_h2c_rfc9380_hash_to_curve_e2e_test_vectors();
     test_h2c_rfc9380_encode_to_curve_test_vectors();
     test_h2c_rfc9380_encode_to_curve_e2e_test_vectors();
+
+    /* Testing FROST against official test vectors (RFC9591) */
+    test_frost_rfc9591_test_vectors();
 
 }
 
