@@ -11,6 +11,7 @@
 #include "hash_to_curve.h"
 #include "tests_bigint.h"
 #include "tests_h2c_rfc9380.h"
+#include "tests_frost_rfc9591.h"
 
 
 void test_secp256k1_gej_eq_case_1(void) {
@@ -3543,6 +3544,16 @@ void run_frost_tests(void) {
     test_h2c_rfc9380_hash_to_curve_e2e_test_vectors();
     test_h2c_rfc9380_encode_to_curve_test_vectors();
     test_h2c_rfc9380_encode_to_curve_e2e_test_vectors();
+
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
+    printf("Module FROST: FROST is compiled in BIP-340 mode. Not executing RFC-9591 tests\n");
+#else
+    /* RFC9591 mode */
+    /* Test FROST against official test vectors (RFC9591) */
+    printf("Module FROST: executing RFC-9591 tests\n");
+    test_frost_rfc9591_test_vectors();
+#endif
 }
 
 #endif /* SECP256K1_MODULE_FROST_TESTS_H */
