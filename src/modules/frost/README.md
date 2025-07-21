@@ -74,9 +74,6 @@ We refer to [draft v12](https://www.ietf.org/archive/id/draft-irtf-cfrg-frost-12
 - [x] `compute_group_commitment()`
 - [x] `compute_challenge()`
 
-> TODO: Currently, we do not implement compute_challange as expected by BIP-340, 
-> which initializes SHA256 with fixed midstate (SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"))
-
 #### Two-Round FROST Signing Protocol (Section 5 of IETF Standard)
 
 - [x] `commit()`: in our implementation, this function is named `secp256k1_frost_nonce_create()`
@@ -119,4 +116,12 @@ our implementation verifies each signature share before computing the aggregated
 traditional Schnorr verification (e.g., as implemented in `secp256k1_schnorrsig_verify()`)
 
 ### BIP-340 Mode 
-> TODO: This functionality is not currently supported. 
+
+To retain compatibility with BIP-340, our module supports tweaking points and encoding only the x-only coordinates of points.
+This functionality is expressed by compiling the library with the flag `--enable-module-frost-bip340-mode`
+(or, the `cmake` flag `-DSECP256K1_ENABLE_MODULE_FROST_BIP340_MODE=ON`)
+
+- `secp256k1_frost_sign()`: to follow BIP-340, it adjusts the signature if the group commitment is odd
+- `secp256k1_frost_aggregate()`: to follow BIP-340, it returns the group commitment with even y coordinate. 
+                                In this case, the signature is a 64-byte array (instead of a 65-byte array).
+- Internally, `compute_challenge()` initializes SHA256 with fixed midstate (SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"))
