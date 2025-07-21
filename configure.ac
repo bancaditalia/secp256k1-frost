@@ -196,6 +196,11 @@ AC_ARG_ENABLE(module_ellswift,
 AC_ARG_ENABLE(module_frost,
     AS_HELP_STRING([--enable-module-frost],[enable FROST module (experimental) [default=no]]), [],
     [SECP_SET_DEFAULT([enable_module_frost], [no], [yes])])
+
+AC_ARG_ENABLE(module_frost_bip340_mode,
+  AS_HELP_STRING([--enable-module-frost-bip340-mode],
+                 [enable FROST BIP-340 compatibility mode (experimental) [default=yes]]), [],
+  [SECP_SET_DEFAULT([enable_module_frost_bip340_mode], [yes], [yes])])
 # FROST_SPECIFIC - END
 
 AC_ARG_ENABLE(external_default_callbacks,
@@ -441,6 +446,15 @@ if test x"$enable_module_frost" = x"yes"; then
   SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_FROST=1"
   enable_module_frost=yes
 fi
+if test x"$enable_module_frost_bip340_mode" = x"yes"; then
+   if test x"$enable_module_frost" != x"yes"; then
+      AC_MSG_NOTICE([--enable-module-frost-bip340-mode automatically enabling --enable-module-frost])
+      enable_module_frost=yes
+      SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_FROST=1"
+  fi
+  SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_FROST_BIP340_MODE=1"
+  enable_module_frost_bip340_mode=yes
+fi
 # FROST_SPECIFIC - END
 
 if test x"$enable_external_default_callbacks" = x"yes"; then
@@ -483,6 +497,7 @@ AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG], [test x"$enable_module_schnorrsig" = 
 AM_CONDITIONAL([ENABLE_MODULE_MUSIG], [test x"$enable_module_musig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_ELLSWIFT], [test x"$enable_module_ellswift" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_FROST], [test x"$enable_module_frost" != x"no"]) # FROST_SPECIFIC
+AM_CONDITIONAL([ENABLE_MODULE_FROST_BIP340_MODE], [test x"$enable_module_frost_bip340_mode" != x"no"]) # FROST_SPECIFIC
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$enable_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm32"])
 AM_CONDITIONAL([BUILD_WINDOWS], [test "$build_windows" = "yes"])
@@ -508,6 +523,7 @@ echo "  module schnorrsig       = $enable_module_schnorrsig"
 echo "  module musig            = $enable_module_musig"
 echo "  module ellswift         = $enable_module_ellswift"
 echo "  module frost            = $enable_module_frost" # FROST_SPECIFIC
+echo "  module frost (BIP-340)  = $enable_module_frost_bip340_mode" # FROST_SPECIFIC
 echo
 echo "  asm                     = $set_asm"
 echo "  ecmult window size      = $set_ecmult_window"
