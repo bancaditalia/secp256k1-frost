@@ -1937,7 +1937,7 @@ void test_secp256k1_frost_with_larger_params_to_be_valid(void) {
                                         signature,
                                         msg32, 32,
                                         &keypairs[index].public_keys);
-        CHECK(result == 1);
+       CHECK(result == 1);
     }
 
     /* Cleaning up */
