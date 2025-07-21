@@ -56,22 +56,11 @@ print()
 print("#ifndef IETF_H2C_RFC9380_EXPANDER_TEST_VECTORS_H")
 print("#define IETF_H2C_RFC9380_EXPANDER_TEST_VECTORS_H")
 print()
+print('#include "ietf_rfc9380_expander_test_vector.h"')
+print()
 
 string_as_char_array = ",".join(f"'{c}'" for c in doc["DST"])
 print(f"static const unsigned char ietf_rfc9380_exp_dst[] = {{ {string_as_char_array} }};")
-
-
-struct_definition = """
-typedef struct {
-    size_t len_in_bytes;
-    size_t msg_offset;
-    size_t msg_len;
-    size_t msg_prime_offset;
-    size_t msg_prime_len;
-    size_t uniform_bytes_offset;
-} ietf_rfc9380_expander_test_vector;
-"""
-print(struct_definition)
 
 dst_prime = ""
 offset_msg_running = 0

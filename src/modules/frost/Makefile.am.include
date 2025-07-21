@@ -6,3 +6,4 @@ noinst_HEADERS += src/modules/frost/main_impl.h
 noinst_HEADERS += src/modules/frost/tests_bigint.h
 noinst_HEADERS += src/modules/frost/tests_h2c_rfc9380.h
 noinst_HEADERS += src/modules/frost/tests_impl.h
+noinst_HEADERS += src/modules/frost/vectors/ietf_rfc9380_expander_test_vector.h
