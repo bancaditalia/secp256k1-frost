@@ -2906,7 +2906,7 @@ void test_serialize_and_deserialize_frost_signature(void) {
 
     /* Serialize and deserialize */
     serialize_frost_signature(serialized64, &signature);
-    CHECK(deserialize_frost_signature(&deserialized_signature, serialized64) == 1);
+    CHECK(secp256k1_frost_signature_deserialize(&deserialized_signature, serialized64) == 1);
 
     is_equal = secp256k1_gej_eq(&(signature.r), &(deserialized_signature.r));
     CHECK(is_equal == 1);
