@@ -8,7 +8,8 @@
 #define SECP256K1_MODULE_FROST_TESTS_H
 
 #include "../../../include/secp256k1_frost.h"
-
+#include "hash_to_curve.h"
+#include "tests_h2c_rfc9380.h"
 
 void test_secp256k1_gej_eq_case_1(void) {
     secp256k1_gej a, b;
@@ -3204,6 +3205,18 @@ void run_frost_tests(void) {
 
     /* Test overall process with different parameters */
     test_secp256k1_frost_with_larger_params_to_be_valid();
+
+    /* Testing Hash to Curve (RFC9380) */
+    test_reduce_bigint_mod_p();
+    test_h2c_rfc9380_expand_message_xmd();
+    test_h2c_OS2IP();
+    test_h2c_I2OSP();
+    test_h2c_sqrt_ratio();
+    test_h2c_3isogeny_mapping_vectors();
+    test_h2c_rfc9380_hash_to_curve_test_vectors();
+    test_h2c_rfc9380_hash_to_curve_e2e_test_vectors();
+    test_h2c_rfc9380_encode_to_curve_test_vectors();
+    test_h2c_rfc9380_encode_to_curve_e2e_test_vectors();
 
 }
 
