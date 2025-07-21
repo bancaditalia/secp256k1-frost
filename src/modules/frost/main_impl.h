@@ -1385,13 +1385,13 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
                                                                uint32_t num_signers) {
     const secp256k1_frost_nonce_commitment *matching_commitment = NULL;
     secp256k1_gej signer_pubkey;
-    secp256k1_gej partial, commitment_i, hiding_cmt, binding_cmt;
+    secp256k1_gej partial, comm_share, hiding_cmt, binding_cmt;
     secp256k1_scalar lambda_i;
     secp256k1_scalar *matching_rho_i = NULL;
     uint32_t index;
     int found, is_valid;
 
-    /* Get the binding factor by participant index of the signature share */
+    /* Get the binding factor of the signer */
     found = 0;
     for (index = 0; index < binding_factors->num_binding_factors; index++) {
         if (binding_factors->participant_indexes[index] == signature_share->index) {
@@ -1405,7 +1405,7 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
         return 0;
     }
 
-    /* Compute Lagrange coefficient */
+    /* Compute the interpolating value */
     if (derive_interpolating_value(&lambda_i,
                                    signature_share->index, num_signers,
                                    binding_factors->participant_indexes) == 0) {
@@ -1444,19 +1444,19 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
     secp256k1_frost_gej_deserialize(&hiding_cmt, matching_commitment->hiding);
     secp256k1_frost_gej_deserialize(&binding_cmt, matching_commitment->binding);
     secp256k1_gej_mul_scalar(&partial, &binding_cmt, matching_rho_i);
-    secp256k1_gej_add_var(&commitment_i, &hiding_cmt, &partial, NULL);
+    secp256k1_gej_add_var(&comm_share, &hiding_cmt, &partial, NULL);
 
     if (is_group_commitment_odd == 1) {
-        secp256k1_gej_neg(&commitment_i, &commitment_i);
+        secp256k1_gej_neg(&comm_share, &comm_share);
     }
 
     is_valid = is_signature_response_valid(ctx, signature_share, &signer_pubkey,
-                                           &lambda_i, &commitment_i, challenge);
+                                           &lambda_i, &comm_share, challenge);
 
     /* Clean-up temporary variables */
     secp256k1_gej_clear(&signer_pubkey);
     secp256k1_gej_clear(&partial);
-    secp256k1_gej_clear(&commitment_i);
+    secp256k1_gej_clear(&comm_share);
     secp256k1_gej_clear(&hiding_cmt);
     secp256k1_gej_clear(&binding_cmt);
     secp256k1_scalar_clear(&lambda_i);
