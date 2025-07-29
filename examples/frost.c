@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <secp256k1.h>
 #include <secp256k1_frost.h>
@@ -69,11 +70,11 @@ int main(void) {
         /* Generate 32 bytes of randomness to use for computing the nonce. */
         if (!fill_random(binding_seed, sizeof(binding_seed))) {
             printf("Failed to generate binding_seed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
         if (!fill_random(hiding_seed, sizeof(hiding_seed))) {
             printf("Failed to generate hiding_seed\n");
-            return 1;
+            return EXIT_FAILURE;
         }
 
         /* Create the nonce (the function already computes its commitment) */
@@ -139,5 +140,5 @@ int main(void) {
     }
     secp256k1_context_destroy(sign_verify_ctx);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
