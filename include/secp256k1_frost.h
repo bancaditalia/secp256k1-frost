@@ -91,13 +91,13 @@ typedef struct {
  *              pubkey33: pointer to compact public key (33 bytes).
  *        group_pubkey33: pointer to compact group public key (33 bytes).
  */
-SECP256K1_API int secp256k1_frost_pubkey_load(secp256k1_frost_pubkey *pubkey,
-                                              const uint32_t index,
-                                              const uint32_t max_participants,
-                                              const unsigned char *pubkey33,
-                                              const unsigned char *group_pubkey33)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(4)
-SECP256K1_ARG_NONNULL(5);
+SECP256K1_API int secp256k1_frost_pubkey_load(
+    secp256k1_frost_pubkey *pubkey,
+    const uint32_t index,
+    const uint32_t max_participants,
+    const unsigned char *pubkey33,
+    const unsigned char *group_pubkey33
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5);
 
 /*
  * Return the compact (33-bytes) representation of the public keys in secp256k1_frost_keypair.
@@ -106,11 +106,11 @@ SECP256K1_ARG_NONNULL(5);
  *        group_pubkey33: pointer to a 33-byte array where the group public key will be stored.
  *  In:           pubkey: pointer to an initialized secp256k1_frost_pubkey.
  */
-SECP256K1_API int secp256k1_frost_pubkey_save(unsigned char *pubkey33,
-                                              unsigned char *group_pubkey33,
-                                              const secp256k1_frost_pubkey *pubkey)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2)
-SECP256K1_ARG_NONNULL(3);
+SECP256K1_API int secp256k1_frost_pubkey_save(
+    unsigned char *pubkey33,
+    unsigned char *group_pubkey33,
+    const secp256k1_frost_pubkey *pubkey
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
 /*
  * Initialize a secp256k1_frost_pubkey using information in secp256k1_frost_keypair.
@@ -118,9 +118,10 @@ SECP256K1_ARG_NONNULL(3);
  *  Out:   pubkey: pointer to a secp256k1_frost_pubkey to update.
  *  In:   keypair: pointer to an initialized secp256k1_frost_keypair.
  */
-SECP256K1_API int secp256k1_frost_pubkey_from_keypair(secp256k1_frost_pubkey *pubkey,
-                                                      const secp256k1_frost_keypair *keypair)
-SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
+SECP256K1_API int secp256k1_frost_pubkey_from_keypair(
+    secp256k1_frost_pubkey *pubkey,
+    const secp256k1_frost_keypair *keypair
+) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
 
 /*
  * Create a secp256k1 frost vss_commitments object (in dynamically allocated memory).
@@ -129,7 +130,9 @@ SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
  *  Returns: a newly created vss_commitments object.
  *  In:     threshold: minimum number of participants needed to compute a valid signature.
  */
-SECP256K1_API secp256k1_frost_vss_commitments *secp256k1_frost_vss_commitments_create(uint32_t threshold);
+SECP256K1_API secp256k1_frost_vss_commitments *secp256k1_frost_vss_commitments_create(
+    uint32_t threshold
+);
 
 /*
  * Destroy a secp256k1 vss_commitments object (created in dynamically allocated memory).
@@ -140,8 +143,9 @@ SECP256K1_API secp256k1_frost_vss_commitments *secp256k1_frost_vss_commitments_c
  *  Args:   vss_commitments: an existing vss_commitments to destroy,
  *                           constructed using secp256k1_frost_vss_commitments_create
  */
-SECP256K1_API void secp256k1_frost_vss_commitments_destroy(secp256k1_frost_vss_commitments *vss_commitments)
-SECP256K1_ARG_NONNULL(1);
+SECP256K1_API void secp256k1_frost_vss_commitments_destroy(
+    secp256k1_frost_vss_commitments *vss_commitments
+) SECP256K1_ARG_NONNULL(1);
 
 /*
  * Create a secp256k1 frost nonce object (in dynamically allocated memory).
@@ -170,7 +174,9 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(
  *  Args:   nonce: an existing nonce to destroy, constructed using
  *               secp256k1_frost_nonce_create
  */
-SECP256K1_API void secp256k1_frost_nonce_destroy(secp256k1_frost_nonce *nonce) SECP256K1_ARG_NONNULL(1);
+SECP256K1_API void secp256k1_frost_nonce_destroy(
+    secp256k1_frost_nonce *nonce
+) SECP256K1_ARG_NONNULL(1);
 
 /*
  * Create a secp256k1 frost keypair object (in dynamically allocated memory).
@@ -180,7 +186,9 @@ SECP256K1_API void secp256k1_frost_nonce_destroy(secp256k1_frost_nonce *nonce) S
  *  Returns: a newly created keypair object.
  *  Args:         ctx: pointer to a context object, initialized for signing.
  */
-SECP256K1_API secp256k1_frost_keypair *secp256k1_frost_keypair_create(uint32_t participant_index);
+SECP256K1_API secp256k1_frost_keypair *secp256k1_frost_keypair_create(
+    uint32_t participant_index
+);
 
 /*
  * Destroy a secp256k1 frost keypair object (created in dynamically allocated memory).
@@ -190,7 +198,9 @@ SECP256K1_API secp256k1_frost_keypair *secp256k1_frost_keypair_create(uint32_t p
  *  The keypair to destroy must have been created using secp256k1_frost_keypair_create.
  *  Args:   nonce: an existing keypair to destroy, constructed using secp256k1_frost_keypair_create
  */
-SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keypair) SECP256K1_ARG_NONNULL(1);
+SECP256K1_API void secp256k1_frost_keypair_destroy(
+    secp256k1_frost_keypair *keypair
+) SECP256K1_ARG_NONNULL(1);
 
 /*
  * secp256k1_frost_keygen_dkg_begin() is performed by each participant to initialize a Pedersen
@@ -322,8 +332,8 @@ SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_frost_keypair *keypair,
         secp256k1_frost_nonce *nonce,
         secp256k1_frost_nonce_commitment *signing_commitments
-) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5)
-SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7);
+) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6)
+SECP256K1_ARG_NONNULL(7);
 
 /*
  * Combine FROST signature shares to obtain an aggregated signature.
