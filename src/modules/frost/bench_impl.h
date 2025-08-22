@@ -29,10 +29,25 @@ typedef struct {
 
 static void bench_frost_sign(void* arg, int iters) {
     bench_frost_data *data = (bench_frost_data *)arg;
+    int i, j, signer_index;
+    secp256k1_frost_signature_share signature_share;
 
-    /* TODO: implement. This is just a way of allowing the module to compile, but ensure that it fails at runtime. */
-    data->n += iters;
-    exit(1);
+    for (i = 0; i < iters; i++) {
+        signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
+
+        /* TODO: FIXME - here the same experiment is run (count) times, and nonces are reused.
+         * We do not want to generate new nonces, otherwise the signing time is compromised. */
+        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+            data->state[i].nonces[j]->used = 0;
+        }
+        CHECK(secp256k1_frost_sign(data->ctx,
+                                   &signature_share,
+                                   data->msgs[i],
+                                   BENCH_FROST_THR_PARTICIPANTS,
+                                   &data->state[i].keypairs[signer_index],
+                                   data->state[i].nonces[signer_index],
+                                   data->state[i].signing_commitments) == 1);
+    }
 }
 
 static void bench_frost_aggregate(void* arg, int iters) {
