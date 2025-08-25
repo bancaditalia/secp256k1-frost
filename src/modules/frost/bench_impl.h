@@ -18,6 +18,8 @@ typedef struct {
   secp256k1_frost_keypair *keypairs;
   secp256k1_frost_nonce **nonces;
   secp256k1_frost_nonce_commitment *signing_commitments;
+  secp256k1_frost_pubkey *public_keys;
+  secp256k1_frost_signature_share *signature_shares;
 } secp256k1_frost_data_per_iter;
 
 typedef struct {
@@ -52,10 +54,21 @@ static void bench_frost_sign(void* arg, int iters) {
 
 static void bench_frost_aggregate(void* arg, int iters) {
     bench_frost_data *data = (bench_frost_data *)arg;
+    int i, signer_index;
+    unsigned char signature[65];
 
-    /* TODO: implement. This is just a way of allowing the module to compile, but ensure that it fails at runtime. */
-    data->n += iters;
-    exit(1);
+    for (i = 0; i < iters; i++) {
+        signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
+        /* We aggregate 3 shares out of the 3 provided */
+        CHECK(secp256k1_frost_aggregate(data->ctx,
+                                        signature,
+                                        data->msgs[i],
+                                        &data->state[i].keypairs[signer_index],
+                                        data->state[i].public_keys,
+                                        data->state[i].signing_commitments,
+                                        data->state[i].signature_shares,
+                                        BENCH_FROST_THR_PARTICIPANTS) == 1);
+    }
 }
 
 static void bench_frost_verify(void* arg, int iters) {
@@ -87,6 +100,8 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
         data->state[i].keypairs = (secp256k1_frost_keypair *) malloc(BENCH_FROST_MAX_PARTICIPANTS * sizeof(secp256k1_frost_keypair));
         data->state[i].nonces = (secp256k1_frost_nonce **)malloc(BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_nonce*));
         data->state[i].signing_commitments = (secp256k1_frost_nonce_commitment *)malloc(BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_nonce_commitment));
+        data->state[i].public_keys = (secp256k1_frost_pubkey *)malloc(BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_pubkey));
+        data->state[i].signature_shares = (secp256k1_frost_signature_share *)malloc(BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_signature_share));
 
         /* Message Generation */
         msg[0] = i; msg[1] = i >> 8; msg[2] = i >> 16; msg[3] = i >> 24;
@@ -104,6 +119,11 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
 
         secp256k1_frost_vss_commitments_destroy(_dealer_commitments);
 
+        /* Extracting public_keys from keypair. This operation is intended to be executed by each signer. */
+        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+            secp256k1_frost_pubkey_from_keypair(&data->state[i].public_keys[j], &data->state[i].keypairs[j]);
+        }
+
         /* Nonce and Commitment Generation */
         for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
             fill_random(binding_seed, sizeof(binding_seed));
@@ -115,6 +135,20 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
             memcpy(&data->state[i].signing_commitments[j],
                    &(data->state[i].nonces[j]->commitments), sizeof(secp256k1_frost_nonce_commitment));
         }
+
+        /* Prepare signature shares for aggregation benchmark */
+        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+            CHECK(secp256k1_frost_sign(data->ctx,
+                                       &data->state[i].signature_shares[j],
+                                       data->msgs[i],
+                                       BENCH_FROST_THR_PARTICIPANTS,
+                                       &data->state[i].keypairs[j],
+                                       data->state[i].nonces[j],
+                                       data->state[i].signing_commitments) == 1);
+        }
+        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+            data->state[i].nonces[j]->used = 0;
+        }
     }
 }
 
@@ -124,6 +158,8 @@ static void bench_frost_data_cleanup(bench_frost_data *data, int iters) {
         free((void *) (*data).msgs[i]);
         free((void *) (*data).state[i].keypairs);
         free((void *) (*data).state[i].signing_commitments);
+        free((void *) (*data).state[i].public_keys);
+        free((void *) (*data).state[i].signature_shares);
         for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS;j++) {
             secp256k1_frost_nonce_destroy((*data).state[i].nonces[j]);
         }
