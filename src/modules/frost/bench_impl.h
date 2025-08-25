@@ -20,6 +20,7 @@ typedef struct {
   secp256k1_frost_nonce_commitment *signing_commitments;
   secp256k1_frost_pubkey *public_keys;
   secp256k1_frost_signature_share *signature_shares;
+  unsigned char signature[64];
 } secp256k1_frost_data_per_iter;
 
 typedef struct {
@@ -73,10 +74,14 @@ static void bench_frost_aggregate(void* arg, int iters) {
 
 static void bench_frost_verify(void* arg, int iters) {
     bench_frost_data *data = (bench_frost_data *)arg;
+    int i;
 
-    /* TODO: implement. This is just a way of allowing the module to compile, but ensure that it fails at runtime. */
-    data->n += iters;
-    exit(1);
+    for (i = 0; i < iters; i++) {
+        CHECK(secp256k1_frost_verify(data->ctx,
+                                     data->state[i].signature,
+                                     data->msgs[i],
+                                     data->state[i].public_keys) == 1);
+    }
 }
 
 static void bench_frost_data_init(bench_frost_data *data, int iters) {
@@ -149,6 +154,16 @@ static void bench_frost_data_init(bench_frost_data *data, int iters) {
         for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
             data->state[i].nonces[j]->used = 0;
         }
+
+        /* Prepare aggregated signature for verification benchmark */
+        CHECK(secp256k1_frost_aggregate(data->ctx,
+                                        data->state[i].signature,
+                                        data->msgs[i],
+                                        &data->state[i].keypairs[0],
+                                        data->state[i].public_keys,
+                                        data->state[i].signing_commitments,
+                                        data->state[i].signature_shares,
+                                        BENCH_FROST_THR_PARTICIPANTS) == 1);
     }
 }
 
