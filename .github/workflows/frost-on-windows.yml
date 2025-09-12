@@ -42,19 +42,20 @@ jobs:
         run: ./autogen.sh
       - name: "Autotools: configure for building a windows binary via MinGW"
         run: |
+          # please keep configuration options sorted via "LC_ALL=C sort"
           mingw64-configure \
               SECP_CFLAGS="" \
-              --enable-experimental \
-              --with-test-override-wide-multiply=auto \
-              --with-asm=no \
-              --with-ecmult-window=15 \
-              --with-ecmult-gen-kb=86 \
               --disable-ctime-tests \
               --enable-examples \
+              --enable-experimental \
               --enable-module-ecdh \
+              --enable-module-frost \
               --enable-module-recovery \
               --enable-module-schnorrsig \
-              --enable-module-frost \
+              --with-asm=no \
+              --with-ecmult-gen-kb=86 \
+              --with-ecmult-window=15 \
+              --with-test-override-wide-multiply=auto \
               --with-valgrind=no
       - name: "Autotools: build via MinGW"
         id: autotools_build
@@ -73,15 +74,16 @@ jobs:
         run: |
           mkdir build
           cd build
+          # please keep "-DSECP256K1_*" options sorted via "LC_ALL=C sort"
           mingw64-cmake \
               -DCMAKE_C_FLAGS="-Werror" \
               -DCMAKE_BUILD_TYPE="Release" \
-              -DSECP256K1_BUILD_TESTS=ON \
-              -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
               -DSECP256K1_BUILD_BENCHMARK=OFF \
               -DSECP256K1_BUILD_EXAMPLES=ON \
-              -DSECP256K1_EXPERIMENTAL=ON \
+              -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
+              -DSECP256K1_BUILD_TESTS=ON \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_EXPERIMENTAL=ON \
               ..
           make -j
       - name: "CMake: run FROST example via Wine"

@@ -27,15 +27,16 @@ jobs:
         run: |
           mkdir build
           cd build
+          # please keep "-DSECP256K1_*" options sorted via "LC_ALL=C sort"
           cmake \
               -DCMAKE_C_FLAGS="-Werror" \
               -DCMAKE_BUILD_TYPE="Release" \
-              -DSECP256K1_BUILD_TESTS=ON \
-              -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
               -DSECP256K1_BUILD_BENCHMARK=OFF \
               -DSECP256K1_BUILD_EXAMPLES=ON \
-              -DSECP256K1_EXPERIMENTAL=ON \
+              -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
+              -DSECP256K1_BUILD_TESTS=ON \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_EXPERIMENTAL=ON \
               ..
           make -j
       - name: Run FROST example

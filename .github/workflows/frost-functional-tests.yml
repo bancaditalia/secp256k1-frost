@@ -40,15 +40,16 @@ jobs:
         continue-on-error: true
         id: tests_with_coverage
         run: |
+          # please keep configuration options sorted via "LC_ALL=C sort"
           ./configure \
               SECP_CFLAGS="" \
-              --enable-tests \
-              --disable-exhaustive-tests \
               --disable-benchmark \
+              --disable-exhaustive-tests \
               --enable-coverage \
               --enable-examples \
               --enable-experimental \
-              --enable-module-frost
+              --enable-module-frost \
+              --enable-tests
           make -j
           make check
           # We have to add gcov-ignore-parse-errors=suspicious_hits.warn,
@@ -116,15 +117,16 @@ jobs:
         continue-on-error: true
         id: tests_no_coverage
         run: |
+          # please keep configuration options sorted via "LC_ALL=C sort"
           ./configure \
               SECP_CFLAGS="-Werror" \
-              --enable-tests \
-              --disable-exhaustive-tests \
               --disable-benchmark \
               --disable-coverage \
+              --disable-exhaustive-tests \
               --enable-examples \
               --enable-experimental \
-              --enable-module-frost
+              --enable-module-frost \
+              --enable-tests
           make -j
           ./tests
       - name: Summarize outcomes. Fail if any step failed.
