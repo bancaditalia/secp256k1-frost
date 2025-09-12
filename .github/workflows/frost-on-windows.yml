@@ -49,14 +49,14 @@ jobs:
               --disable-coverage \
               --disable-ctime-tests \
               --disable-exhaustive-tests \
+              --disable-module-ecdh \
               --disable-module-ellswift \
               --disable-module-extrakeys \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --enable-examples \
               --enable-experimental \
-              --enable-module-ecdh \
               --enable-module-frost \
-              --enable-module-recovery \
-              --enable-module-schnorrsig \
               --enable-tests \
               --with-asm=no \
               --with-ecmult-gen-kb=86 \
