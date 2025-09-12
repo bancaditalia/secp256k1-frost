@@ -45,6 +45,11 @@ jobs:
               SECP_CFLAGS="" \
               --disable-benchmark \
               --disable-exhaustive-tests \
+              --disable-module-ecdh \
+              --disable-module-ellswift \
+              --disable-module-extrakeys \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --enable-coverage \
               --enable-examples \
               --enable-experimental \
@@ -123,6 +128,11 @@ jobs:
               --disable-benchmark \
               --disable-coverage \
               --disable-exhaustive-tests \
+              --disable-module-ecdh \
+              --disable-module-ellswift \
+              --disable-module-extrakeys \
+              --disable-module-recovery \
+              --disable-module-schnorrsig \
               --enable-examples \
               --enable-experimental \
               --enable-module-frost \
