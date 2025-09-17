@@ -1311,7 +1311,6 @@ static SECP256K1_WARN_UNUSED_RESULT int check_commitment_and_response_integrity(
         const secp256k1_frost_signature_share *signature_shares,
         uint32_t num_signers) {
     uint32_t cmt_index, shr_index, cmt_found;
-    cmt_found = 0;
 
     for (shr_index = 0; shr_index < num_signers; shr_index++) {
         cmt_found = 0;
