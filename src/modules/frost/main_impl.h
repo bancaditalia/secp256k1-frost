@@ -86,7 +86,7 @@ static int convert_b32_to_scalar(const unsigned char *hash_value, secp256k1_scal
     return 1;
 }
 
-static void serialize_point(const secp256k1_gej *point, unsigned char *output64) {
+static void serialize_point(unsigned char *output64, const secp256k1_gej *point) {
     secp256k1_ge normalized_point;
     secp256k1_ge_set_gej_safe(&normalized_point, point);
     VERIFY_CHECK(!normalized_point.infinity);
@@ -403,8 +403,8 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(const secp256k
     (nonce->commitments).index = keypair->public_keys.index;
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &binding_cmt, &binding);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &hiding_cmt, &hiding);
-    serialize_point(&binding_cmt, nonce->commitments.binding);
-    serialize_point(&hiding_cmt, nonce->commitments.hiding);
+    serialize_point(nonce->commitments.binding, &binding_cmt);
+    serialize_point(nonce->commitments.hiding, &hiding_cmt);
 
     nonce->used = 0;
 
@@ -479,7 +479,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
 
     /* Compute the commitment of the secret term (saved as commitment[0]) */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &coefficient_cmt, secret);
-    serialize_point(&coefficient_cmt, dkg_commitments->coefficient_commitments[0].data);
+    serialize_point(dkg_commitments->coefficient_commitments[0].data, &coefficient_cmt);
 
     for (c_idx = 0; c_idx < num_coefficients; c_idx++) {
         /* Generate random coefficients */
@@ -491,7 +491,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx,
                              &coefficient_cmt,
                              &(coefficients->coefficients[c_idx]));
-        serialize_point(&coefficient_cmt, dkg_commitments->coefficient_commitments[c_idx + 1].data);
+        serialize_point(dkg_commitments->coefficient_commitments[c_idx + 1].data, &coefficient_cmt);
     }
 
     /* Clean-up temporary variables */
@@ -684,7 +684,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     }
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &zkp_r, &r);
-    serialize_point(&zkp_r, dkg_commitment->zkp_r);
+    serialize_point(dkg_commitment->zkp_r, &zkp_r);
     generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r);
 
     /* z = r + secret * H(context, G^secret, G^r) */
@@ -801,7 +801,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     }
     secp256k1_scalar_get_b32(keypair->secret, &scalar_secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &scalar_secret);
-    serialize_point(&pubkey, keypair->public_keys.public_key);
+    serialize_point(keypair->public_keys.public_key, &pubkey);
 
     secp256k1_gej_set_infinity(&group_pubkey);
 
@@ -810,7 +810,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
         deserialize_point(&secret_commitment, commitments[c_idx]->coefficient_commitments[0].data);
         secp256k1_gej_add_var(&group_pubkey, &group_pubkey, &secret_commitment, NULL);
     }
-    serialize_point(&group_pubkey, keypair->public_keys.group_public_key);
+    serialize_point(keypair->public_keys.group_public_key, &group_pubkey);
     keypair->public_keys.max_participants = num_participants;
 
     /* Clean-up temporary variables */
@@ -866,10 +866,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
         for (index = 0; index < num_participants; index++) {
             secp256k1_scalar_set_b32(&share_value, shares[index].value, NULL);
             secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
-            serialize_point(&pubkey, keypairs[index].public_keys.public_key);
+            serialize_point(keypairs[index].public_keys.public_key, &pubkey);
 
             memcpy(&keypairs[index].secret, &shares[index].value, SCALAR_SIZE);
-            serialize_point(&group_public_key, keypairs[index].public_keys.group_public_key);
+            serialize_point(keypairs[index].public_keys.group_public_key, &group_public_key);
             keypairs[index].public_keys.index = shares[index].receiver_index;
             keypairs[index].public_keys.max_participants = num_participants;
         }

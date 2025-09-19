@@ -586,7 +586,7 @@ void test_secp256k1_frost_keygen_validate_invalid_secret_commitment(void) {
     secp256k1_fe_set_int(&_invalidPoint.y, 0);
     secp256k1_fe_set_int(&_invalidPoint.z, 1);
     _invalidPoint.infinity = 0;
-    serialize_point(&_invalidPoint, dkg_commitment->coefficient_commitments[0].data);
+    serialize_point(dkg_commitment->coefficient_commitments[0].data, &_invalidPoint);
 
     /* now, ensure that this dkg commitment is marked as invalid */
     result = secp256k1_frost_keygen_dkg_commitment_validate(
@@ -965,7 +965,7 @@ void test_secp256k1_frost_keygen_finalize_invalid_commitments(void) {
     secp256k1_fe_set_int(&_invalidPoint.y, 0);
     secp256k1_fe_set_int(&_invalidPoint.z, 1);
     _invalidPoint.infinity = 0;
-    serialize_point(&_invalidPoint, dkg_commitment[0]->coefficient_commitments[0].data);
+    serialize_point(dkg_commitment[0]->coefficient_commitments[0].data, &_invalidPoint);
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
@@ -2880,7 +2880,7 @@ void test_serialize_and_deserialize_point(void) {
     secp256k1_ecmult_gen(&test_ctx->ecmult_gen_ctx, &point, &seed);
 
     /* Serialize and deserialize */
-    serialize_point(&point, serialized64);
+    serialize_point(serialized64, &point);
     deserialize_point(&deserialized_point, serialized64);
 
     is_equal = secp256k1_gej_eq(&point, &deserialized_point);
@@ -2938,8 +2938,8 @@ void test_secp256k1_frost_pubkey_save_and_load(void) {
     /* Prepare reference pubkey */
     reference_pubkey.index = 1;
     reference_pubkey.max_participants = 2;
-    serialize_point(&ref_pk, reference_pubkey.public_key);
-    serialize_point(&ref_gpk, reference_pubkey.group_public_key);
+    serialize_point(reference_pubkey.public_key, &ref_pk);
+    serialize_point(reference_pubkey.group_public_key, &ref_gpk);
 
     /* Save pubkey and check if function returns 1 */
     CHECK(secp256k1_frost_pubkey_save(saved_pubkey, saved_group_pubkey,
@@ -2986,7 +2986,7 @@ void test_secp256k1_frost_verify_to_be_valid(void) {
     secp256k1_scalar_add(&(signature.z), &nonce, &(signature.z));
 
     serialize_frost_signature(serialized64, &signature);
-    serialize_point(&pubkey, keypair.public_keys.group_public_key);
+    serialize_point(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,
                                     serialized64,
@@ -3091,7 +3091,7 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_scalar_add(&(signature.z), &invalid_nonce, &(signature.z));
 
     serialize_frost_signature(serialized64, &signature);
-    serialize_point(&pubkey, keypair.public_keys.group_public_key);
+    serialize_point(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,
                                     serialized64,
