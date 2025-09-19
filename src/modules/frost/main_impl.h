@@ -201,13 +201,13 @@ static void compute_hash_h4(unsigned char *out32, const unsigned char *msg, uint
     secp256k1_sha256_finalize(&sha, out32);
 }
 
-static void compute_hash_h5(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
+static void compute_hash_h5(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
     /* H5(m): Implemented by computing H("FROST-secp256k1-SHA256-v11" || "com" || m). */
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, hash_context_prefix_h5, sizeof(hash_context_prefix_h5));
     secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, hash_value);
+    secp256k1_sha256_finalize(&sha, out32);
 }
 
 static void nonce_generate(unsigned char *out32, const secp256k1_frost_keypair *keypair,
@@ -1051,7 +1051,7 @@ static void compute_binding_factor(
     encoded_group_commitments = (unsigned char *) checked_malloc(&default_error_callback,
                                                                  encoded_group_commitments_size);
     encode_group_commitments(encoded_group_commitments, num_signers, signing_commitments);
-    compute_hash_h5(encoded_group_commitments, encoded_group_commitments_size, &(rho_input[SHA256_SIZE]));
+    compute_hash_h5(&(rho_input[SHA256_SIZE]), encoded_group_commitments, encoded_group_commitments_size);
 
     free(encoded_group_commitments);
 
