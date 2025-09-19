@@ -158,7 +158,7 @@ static SECP256K1_WARN_UNUSED_RESULT int initialize_random_scalar(secp256k1_scala
     return 1;
 }
 
-static void compute_hash_h1(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
+static void compute_hash_h1(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
     /* TODO: replace with hash-to-curve
     * H1(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.3 using L = 48,
     * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "rho", and prime modulus equal to Order(). */
@@ -166,7 +166,7 @@ static void compute_hash_h1(const unsigned char *msg, uint32_t msg_len, unsigned
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, hash_context_prefix_h1, sizeof(hash_context_prefix_h1));
     secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, hash_value);
+    secp256k1_sha256_finalize(&sha, out32);
 }
 
 static void compute_hash_h2(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
@@ -1059,7 +1059,7 @@ static void compute_binding_factor(
     serialize_scalar(index, &(rho_input[SHA256_SIZE + SHA256_SIZE]));
 
     /* Compute binding factor for participant (index); binding_factor = H.H1(rho_input) */
-    compute_hash_h1(rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE, binding_factor_hash);
+    compute_hash_h1(binding_factor_hash, rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
 
     /* Convert to scalar (overflow ignored on purpose) */
     convert_b32_to_scalar(binding_factor_hash, binding_factor);
