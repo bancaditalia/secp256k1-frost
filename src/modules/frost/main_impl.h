@@ -192,13 +192,13 @@ static void compute_hash_h3(unsigned char *out32, const unsigned char *msg, uint
     secp256k1_sha256_finalize(&sha, out32);
 }
 
-static void compute_hash_h4(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
+static void compute_hash_h4(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
     /* H4(m): Implemented by computing H("FROST-secp256k1-SHA256-v11" || "msg" || m). */
     secp256k1_sha256 sha;
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, hash_context_prefix_h4, sizeof(hash_context_prefix_h4));
     secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, hash_value);
+    secp256k1_sha256_finalize(&sha, out32);
 }
 
 static void compute_hash_h5(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
@@ -1044,7 +1044,7 @@ static void compute_binding_factor(
     unsigned char *encoded_group_commitments;
 
     /* unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE]; */
-    compute_hash_h4(msg, msg_len, rho_input);
+    compute_hash_h4(rho_input, msg, msg_len);
 
     encoded_group_commitments_size = num_signers * (SCALAR_SIZE +
                                                     SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
