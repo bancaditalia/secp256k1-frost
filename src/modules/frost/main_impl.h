@@ -169,7 +169,7 @@ static void compute_hash_h1(unsigned char *out32, const unsigned char *msg, uint
     secp256k1_sha256_finalize(&sha, out32);
 }
 
-static void compute_hash_h2(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
+static void compute_hash_h2(unsigned char *out32, const unsigned char *msg, uint32_t msg_len) {
     /* TODO: replace with hash-to-curve
     * H2(m): Implemented using hash_to_field from [HASH-TO-CURVE], Section 5.2 using L = 48,
     * expand_message_xmd with SHA-256, DST = "FROST-secp256k1-SHA256-v11" || "chal", and prime modulus equal to Order().*/
@@ -178,7 +178,7 @@ static void compute_hash_h2(const unsigned char *msg, uint32_t msg_len, unsigned
     secp256k1_sha256_initialize(&sha);
     secp256k1_sha256_write(&sha, prefix, sizeof(prefix));
     secp256k1_sha256_write(&sha, msg, msg_len);
-    secp256k1_sha256_finalize(&sha, hash_value);
+    secp256k1_sha256_finalize(&sha, out32);
 }
 
 static void compute_hash_h3(const unsigned char *msg, uint32_t msg_len, unsigned char *hash_value) {
