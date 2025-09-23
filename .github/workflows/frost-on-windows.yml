@@ -51,6 +51,7 @@ jobs:
               --disable-module-ecdh \
               --disable-module-ellswift \
               --disable-module-extrakeys \
+              --disable-module-musig \
               --disable-module-recovery \
               --disable-module-schnorrsig \
               --enable-benchmark \
@@ -98,6 +99,7 @@ jobs:
               -DSECP256K1_ENABLE_MODULE_ELLSWIFT=OFF \
               -DSECP256K1_ENABLE_MODULE_EXTRAKEYS=OFF \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_ENABLE_MODULE_MUSIG=OFF \
               -DSECP256K1_ENABLE_MODULE_RECOVERY=OFF \
               -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=OFF \
               -DSECP256K1_EXPERIMENTAL=ON \
@@ -106,21 +108,13 @@ jobs:
       - name: "CMake: run FROST example via Wine"
         id: cmake_frost_example
         run: |
-          # frost_example.exe is dynamically linked. Let's copy it under src so
-          # that wine's linker is able to find libsecp256k1-2.dll. There is
-          # probably a more elegant way.
-          #
-          # "--update=none-fail" did not work on coreutils 9.5 (Fedora 41) due
-          # to a bug. It required a workaround that is no longer necessary with
-          # coreutils 9.6 (Fedora 42 or later).
-          cp --update=none-fail "${GITHUB_WORKSPACE}/build/examples/frost_example.exe" "${GITHUB_WORKSPACE}/build/src"
-          wine "${GITHUB_WORKSPACE}/build/src/frost_example.exe"
+          wine "${GITHUB_WORKSPACE}/build/bin/frost_example.exe"
       - name: "Cmake: run frost benchmark via Wine (10 iterations)"
         id: cmake_frost_benchmark
         run: |
           export SECP256K1_BENCH_ITERS=10
-          wine64 "${GITHUB_WORKSPACE}/build/src/bench.exe" frost
+          wine64 "${GITHUB_WORKSPACE}/build/bin/bench.exe" frost
       - name: "Cmake: run functional tests via Wine"
         id: cmake_functional_tests
         run: |
-          wine "${GITHUB_WORKSPACE}/build/src/tests.exe"
+          wine "${GITHUB_WORKSPACE}/build/bin/tests.exe"

@@ -40,6 +40,7 @@ jobs:
               -DSECP256K1_ENABLE_MODULE_ELLSWIFT=OFF \
               -DSECP256K1_ENABLE_MODULE_EXTRAKEYS=OFF \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_ENABLE_MODULE_MUSIG=OFF \
               -DSECP256K1_ENABLE_MODULE_RECOVERY=OFF \
               -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=OFF \
               -DSECP256K1_EXPERIMENTAL=ON \
@@ -47,11 +48,11 @@ jobs:
           make -j
       - name: Run FROST example
         run: |
-          "${GITHUB_WORKSPACE}/build/examples/frost_example"
+          "${GITHUB_WORKSPACE}/build/bin/frost_example"
       - name: Run frost benchmark (10 iterations)
         run: |
           export SECP256K1_BENCH_ITERS=10
-          "${GITHUB_WORKSPACE}/build/src/bench" frost
+          "${GITHUB_WORKSPACE}/build/bin/bench" frost
       - name: Run functional tests
         run: |
-          "${GITHUB_WORKSPACE}/build/src/tests"
+          "${GITHUB_WORKSPACE}/build/bin/tests"

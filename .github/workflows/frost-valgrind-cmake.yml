@@ -41,6 +41,7 @@ jobs:
               -DSECP256K1_ENABLE_MODULE_ELLSWIFT=OFF \
               -DSECP256K1_ENABLE_MODULE_EXTRAKEYS=OFF \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_ENABLE_MODULE_MUSIG=OFF \
               -DSECP256K1_ENABLE_MODULE_RECOVERY=OFF \
               -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=OFF \
               -DSECP256K1_EXPERIMENTAL=ON \
@@ -52,7 +53,7 @@ jobs:
               --show-error-list=yes \
               --leak-check=yes \
               --error-exitcode=17 \
-              "${GITHUB_WORKSPACE}/build/examples/frost_example"
+              "${GITHUB_WORKSPACE}/build/bin/frost_example"
       - name: run the FROST benchmark under Valgrind (10 iterations)
         run: |
           export SECP256K1_BENCH_ITERS=10
@@ -60,11 +61,11 @@ jobs:
               --show-error-list=yes \
               --leak-check=yes \
               --error-exitcode=17 \
-              "${GITHUB_WORKSPACE}/build/src/bench" frost
+              "${GITHUB_WORKSPACE}/build/bin/bench" frost
       - name: run the FROST tests under Valgrind
         run: |
           valgrind \
               --show-error-list=yes \
               --leak-check=yes \
               --error-exitcode=17 \
-              "${GITHUB_WORKSPACE}/build/src/tests"
+              "${GITHUB_WORKSPACE}/build/bin/tests"
