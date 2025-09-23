@@ -508,8 +508,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_coefficients(const secp256k1_co
  *
  *  Returns: 1: on success; 0: on failure
  *  Out: secret_key_shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
- *  In:       coefficients: pointer to shamir_coefficients where coefficients will be stored.
- *         generator_index: index of participant generating coefficients.
+ *  In:    generator_index: index of participant generating coefficients.
  *        num_participants: number of participants to the secret sharing
  *            coefficients: pointer to shamir_coefficients.
  *                  secret: secret to be used as known term of the Shamir polynomial.
