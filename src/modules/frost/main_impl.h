@@ -838,7 +838,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
     return 1;
 }
 
-static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
+static void secp256k1_frost_keygen_with_dealer_core(
         const secp256k1_context *ctx,
         secp256k1_frost_vss_commitments *vss_commitments,
         secp256k1_frost_keygen_secret_share *secret_key_shares,
@@ -876,8 +876,6 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
     secp256k1_gej_clear(&group_public_key);
     secp256k1_gej_clear(&pubkey);
     secp256k1_scalar_clear(&share_value);
-
-    return 1;
 }
 
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
@@ -891,7 +889,6 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     secp256k1_scalar secret;
     uint32_t generator_index;
     shamir_coefficients *coefficients;
-    int result;
 
     /* We use generator_index=0 as we are generating secret_key_shares with a dealer */
     generator_index = 0;
@@ -910,19 +907,19 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
     }
     /* Generate secret_key_shares */
     coefficients = shamir_coefficients_create(threshold);
-    result = 0;
-    if (generate_random_coefficients(coefficients, generator_index, threshold) == 1) {
-        result = secp256k1_frost_keygen_with_dealer_core(
-                ctx, vss_commitments, secret_key_shares, keypairs,
-                num_participants, threshold, &secret, coefficients, generator_index);
+    if (generate_random_coefficients(coefficients, generator_index, threshold) == 0) {
+        return 0;
     }
+    secp256k1_frost_keygen_with_dealer_core(
+        ctx, vss_commitments, secret_key_shares, keypairs,
+        num_participants, threshold, &secret, coefficients, generator_index);
 
     /* Clean-up temporary variables */
     secp256k1_scalar_clear(&secret);
 
     /* Free allocated memory */
     shamir_coefficients_destroy(coefficients);
-    return result;
+    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int signing_commitment_compare(secp256k1_frost_nonce_commitment *s1,
