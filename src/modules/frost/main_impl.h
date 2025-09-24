@@ -849,6 +849,8 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
         const shamir_coefficients *coefficients,
         uint32_t generator_index) {
     secp256k1_gej group_public_key;
+    secp256k1_gej pubkey;
+    secp256k1_scalar share_value;
     uint32_t index;
 
     /* Compute group public key */
@@ -861,9 +863,6 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
 
     /* Preparing output key-pairs */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_scalar share_value;
-        secp256k1_gej pubkey;
-
         secp256k1_scalar_set_b32(&share_value, secret_key_shares[index].value, NULL);
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &pubkey, &share_value);
         secp256k1_frost_gej_serialize(keypairs[index].public_keys.public_key, &pubkey);
@@ -871,14 +870,12 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer_core(
         secp256k1_frost_gej_serialize(keypairs[index].public_keys.group_public_key, &group_public_key);
         keypairs[index].public_keys.index = secret_key_shares[index].receiver_index;
         keypairs[index].public_keys.max_participants = num_participants;
-
-        /* Clean-up temporary variables */
-        secp256k1_scalar_clear(&share_value);
-        secp256k1_gej_clear(&pubkey);
     }
 
     /* Clean-up temporary variables */
     secp256k1_gej_clear(&group_public_key);
+    secp256k1_gej_clear(&pubkey);
+    secp256k1_scalar_clear(&share_value);
 
     return 1;
 }
