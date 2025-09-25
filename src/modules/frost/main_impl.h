@@ -693,10 +693,12 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     }
     if (generate_shares_with_random_polynomial(ctx, vss_commitments, secret_key_shares, num_participants,
                                                threshold, generator_index, &secret) == 0) {
+        secp256k1_scalar_clear(&secret);
         return 0;
     }
 
     if (initialize_random_scalar(&r) == 0) {
+        secp256k1_scalar_clear(&secret);
         return 0;
     }
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
