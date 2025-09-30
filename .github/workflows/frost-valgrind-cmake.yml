@@ -1,4 +1,4 @@
-name: "FROST: run tests and examples under Valgrind (CMake)"
+name: "FROST: run tests, examples and benchmark under Valgrind (CMake)"
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Build with CMake (only enabling FROST, tests and examples)
+      - name: Build with CMake (only enabling FROST, tests, examples and benchmark)
         run: |
           mkdir build
           cd build
@@ -32,7 +32,7 @@ jobs:
           cmake \
               -DCMAKE_C_FLAGS="-Werror" \
               -DCMAKE_BUILD_TYPE="Release" \
-              -DSECP256K1_BUILD_BENCHMARK=OFF \
+              -DSECP256K1_BUILD_BENCHMARK=ON \
               -DSECP256K1_BUILD_CTIME_TESTS=OFF \
               -DSECP256K1_BUILD_EXAMPLES=ON \
               -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
@@ -53,6 +53,14 @@ jobs:
               --leak-check=yes \
               --error-exitcode=17 \
               "${GITHUB_WORKSPACE}/build/examples/frost_example"
+      - name: run the FROST benchmark under Valgrind (10 iterations)
+        run: |
+          export SECP256K1_BENCH_ITERS=10
+          valgrind \
+              --show-error-list=yes \
+              --leak-check=yes \
+              --error-exitcode=17 \
+              "${GITHUB_WORKSPACE}/build/src/bench" frost
       - name: run the FROST tests under Valgrind
         run: |
           valgrind \

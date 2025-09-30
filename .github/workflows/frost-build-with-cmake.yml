@@ -31,7 +31,7 @@ jobs:
           cmake \
               -DCMAKE_C_FLAGS="-Werror" \
               -DCMAKE_BUILD_TYPE="Release" \
-              -DSECP256K1_BUILD_BENCHMARK=OFF \
+              -DSECP256K1_BUILD_BENCHMARK=ON \
               -DSECP256K1_BUILD_CTIME_TESTS=OFF \
               -DSECP256K1_BUILD_EXAMPLES=ON \
               -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
@@ -48,6 +48,10 @@ jobs:
       - name: Run FROST example
         run: |
           "${GITHUB_WORKSPACE}/build/examples/frost_example"
+      - name: Run frost benchmark (10 iterations)
+        run: |
+          export SECP256K1_BENCH_ITERS=10
+          "${GITHUB_WORKSPACE}/build/src/bench" frost
       - name: Run functional tests
         run: |
           "${GITHUB_WORKSPACE}/build/src/tests"

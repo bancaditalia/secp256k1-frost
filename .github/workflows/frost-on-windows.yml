@@ -45,7 +45,6 @@ jobs:
           # please keep configuration options sorted via "LC_ALL=C sort"
           mingw64-configure \
               SECP_CFLAGS="" \
-              --disable-benchmark \
               --disable-coverage \
               --disable-ctime-tests \
               --disable-exhaustive-tests \
@@ -54,6 +53,7 @@ jobs:
               --disable-module-extrakeys \
               --disable-module-recovery \
               --disable-module-schnorrsig \
+              --enable-benchmark \
               --enable-examples \
               --enable-experimental \
               --enable-module-frost \
@@ -72,6 +72,11 @@ jobs:
       - name: "Autotools: run frost example via Wine"
         id: autotools_frost_example
         run: wine64 ./frost_example.exe
+      - name: "Autotools: run frost benchmark via Wine (10 iterations)"
+        id: autotools_frost_benchmark
+        run: |
+            export SECP256K1_BENCH_ITERS=10
+            wine64 ./bench.exe frost
       - name: "Autotools: run functional tests manually via Wine"
         id: autotools_functional_tests
         run: wine64 ./tests.exe
@@ -84,7 +89,7 @@ jobs:
           mingw64-cmake \
               -DCMAKE_C_FLAGS="-Werror" \
               -DCMAKE_BUILD_TYPE="Release" \
-              -DSECP256K1_BUILD_BENCHMARK=OFF \
+              -DSECP256K1_BUILD_BENCHMARK=ON \
               -DSECP256K1_BUILD_CTIME_TESTS=OFF \
               -DSECP256K1_BUILD_EXAMPLES=ON \
               -DSECP256K1_BUILD_EXHAUSTIVE_TESTS=OFF \
@@ -110,6 +115,11 @@ jobs:
           # coreutils 9.6 (Fedora 42).
           cp --update=none-fail "${GITHUB_WORKSPACE}/build/examples/frost_example.exe" "${GITHUB_WORKSPACE}/build/src"
           wine "${GITHUB_WORKSPACE}/build/src/frost_example.exe"
+      - name: "Cmake: run frost benchmark via Wine (10 iterations)"
+        id: cmake_frost_benchmark
+        run: |
+          export SECP256K1_BENCH_ITERS=10
+          wine64 "${GITHUB_WORKSPACE}/build/src/bench.exe" frost
       - name: "Cmake: run functional tests via Wine"
         id: cmake_functional_tests
         run: |
