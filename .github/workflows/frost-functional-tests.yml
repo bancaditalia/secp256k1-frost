@@ -43,13 +43,13 @@ jobs:
           # please keep configuration options sorted via "LC_ALL=C sort"
           ./configure \
               SECP_CFLAGS="" \
-              --disable-benchmark \
               --disable-exhaustive-tests \
               --disable-module-ecdh \
               --disable-module-ellswift \
               --disable-module-extrakeys \
               --disable-module-recovery \
               --disable-module-schnorrsig \
+              --enable-benchmark \
               --enable-coverage \
               --enable-examples \
               --enable-experimental \
@@ -125,7 +125,6 @@ jobs:
           # please keep configuration options sorted via "LC_ALL=C sort"
           ./configure \
               SECP_CFLAGS="-Werror" \
-              --disable-benchmark \
               --disable-coverage \
               --disable-exhaustive-tests \
               --disable-module-ecdh \
@@ -133,6 +132,7 @@ jobs:
               --disable-module-extrakeys \
               --disable-module-recovery \
               --disable-module-schnorrsig \
+              --enable-benchmark \
               --enable-examples \
               --enable-experimental \
               --enable-module-frost \
