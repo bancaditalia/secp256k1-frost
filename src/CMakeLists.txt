@@ -91,7 +91,7 @@ unset(${PROJECT_NAME}_soversion)
 
 if(SECP256K1_BUILD_BENCHMARK)
   add_executable(bench bench.c)
-  target_link_libraries(bench secp256k1)
+  target_link_libraries(bench secp256k1 $<$<AND:$<BOOL:${SECP256K1_ENABLE_MODULE_FROST}>,$<PLATFORM_ID:Windows>>:bcrypt>) # FROST_SPECIFIC: conditionally add brcypt for Frost-enabled builds on Windows (MinGW)
   add_executable(bench_internal bench_internal.c)
   target_link_libraries(bench_internal secp256k1_precomputed secp256k1_asm $<$<AND:$<BOOL:${SECP256K1_ENABLE_MODULE_FROST}>,$<PLATFORM_ID:Windows>>:bcrypt>) # FROST_SPECIFIC: conditionally add brcypt for Frost-enabled builds on Windows (MinGW)
   add_executable(bench_ecmult bench_ecmult.c)
