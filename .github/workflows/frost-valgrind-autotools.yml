@@ -1,4 +1,4 @@
-name: "FROST: run tests and example under Valgrind"
+name: "FROST: run tests and examples under Valgrind (autotools)"
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  tests-and-examples-under-valgrind:
+  frost-valgrind-autotools:
     runs-on: ubuntu-24.04
     # Use fedora:42 to compile using gcc-15.1
     container:
