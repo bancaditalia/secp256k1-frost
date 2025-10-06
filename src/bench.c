@@ -27,6 +27,12 @@ static void help(int default_iters) {
     printf("    - Schnorr signatures (optional module)\n");
 #endif
 
+/* FROST_SPECIFIC - START */
+#ifdef ENABLE_MODULE_FROST
+    printf("    - FROST (optional module)\n");
+#endif
+/* FROST_SPECIFIC - END */
+
     printf("\n");
     printf("The default number of iterations for each benchmark is %d. This can be\n", default_iters);
     printf("customized using the SECP256K1_BENCH_ITERS environment variable.\n");
@@ -63,6 +69,14 @@ static void help(int default_iters) {
     printf("    ellswift_ecdh     : ECDH on ElligatorSwift keys\n");
 #endif
 
+/* FROST_SPECIFIC - START */
+#ifdef ENABLE_MODULE_FROST
+    printf("    frost             : all FROST benchmarks (sign, verify, aggregate)\n");
+    printf("    frost_sign        : FROST share signing\n");
+    printf("    frost_aggregate   : FROST aggregation of signature shares\n");
+    printf("    frost_verify      : FROST verification of aggregated signature \n");
+#endif
+/* FROST_SPECIFIC - END */
     printf("\n");
 }
 
@@ -165,6 +179,12 @@ static void bench_keygen_run(void *arg, int iters) {
 # include "modules/ellswift/bench_impl.h"
 #endif
 
+/* FROST_SPECIFIC - START */
+#ifdef ENABLE_MODULE_FROST
+# include "modules/frost/bench_impl.h"
+#endif
+/* FROST_SPECIFIC - END */
+
 int main(int argc, char** argv) {
     int i;
     secp256k1_pubkey pubkey;
@@ -177,6 +197,7 @@ int main(int argc, char** argv) {
 
     /* Check for invalid user arguments */
     char* valid_args[] = {"ecdsa", "verify", "ecdsa_verify", "sign", "ecdsa_sign", "ecdh", "recover",
+                          "frost", "frost_sign", "frost_verify", "frost_aggregate", "aggregate", /* FROST_SPECIFIC */
                          "ecdsa_recover", "schnorrsig", "schnorrsig_verify", "schnorrsig_sign", "ec",
                          "keygen", "ec_keygen", "ellswift", "encode", "ellswift_encode", "decode",
                          "ellswift_decode", "ellswift_keygen", "ellswift_ecdh"};
@@ -274,6 +295,12 @@ int main(int argc, char** argv) {
     /* ElligatorSwift benchmarks */
     run_ellswift_bench(iters, argc, argv);
 #endif
+
+/* FROST_SPECIFIC - START */
+#ifdef ENABLE_MODULE_FROST
+    run_frost_bench(iters, argc, argv);
+#endif
+/* FROST_SPECIFIC - END */
 
     return 0;
 }
