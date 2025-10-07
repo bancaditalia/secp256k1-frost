@@ -1010,7 +1010,8 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_group_commitment(
 }
 
 static void compute_challenge(secp256k1_scalar *challenge,
-                              const unsigned char *msg, uint32_t msg_len,
+                              const unsigned char *msg,
+                              uint32_t msg_len,
                               const secp256k1_gej *group_public_key,
                               const secp256k1_gej *group_commitment) {
     unsigned char buf[SCALAR_SIZE];
@@ -1077,7 +1078,8 @@ static void encode_group_commitments(
 static void compute_binding_factor(
         /* out */ secp256k1_scalar *binding_factor,
                   uint32_t index,
-                  const unsigned char *msg, uint32_t msg_len,
+                  const unsigned char *msg,
+                  uint32_t msg_len,
                   uint32_t num_signers,
                   const secp256k1_frost_nonce_commitment *signing_commitments) {
 
@@ -1129,8 +1131,11 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
 
     for (index = 0; index < num_signers; index++) {
         compute_binding_factor(&(binding_factors->binding_factors[index]),
-                               signing_commitments[index].index, msg32, msg_len,
-                               num_signers, signing_commitments);
+                               signing_commitments[index].index,
+                               msg32,
+                               msg_len,
+                               num_signers,
+                               signing_commitments);
 
         binding_factors->participant_indexes[index] = signing_commitments[index].index;
     }
@@ -1221,7 +1226,11 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_sign_internal(
 
     /* Compute the per-message challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
-    compute_challenge(&c, msg32, 32, &group_pubkey, &(group_commitment));
+    compute_challenge(&c,
+                      msg32,
+                      32,
+                      &group_pubkey,
+                      &(group_commitment));
 
     /* Compute the signature share */
     my_rho_i = NULL;
@@ -1319,13 +1328,22 @@ SECP256K1_API int secp256k1_frost_sign(
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
 
     /* Compute the binding factor(s) */
-    if (compute_binding_factors(ctx, &binding_factors, msg32, 32, num_signers, signing_commitments) == 0) {
+    if (compute_binding_factors(ctx,
+                                &binding_factors,
+                                msg32,
+                                32,
+                                num_signers,
+                                signing_commitments) == 0) {
         return 0;
     }
 
     /* Sign the message */
-    if (secp256k1_frost_sign_internal(signature_share, msg32, num_signers,
-                                      keypair, nonce, signing_commitments,
+    if (secp256k1_frost_sign_internal(signature_share,
+                                      msg32,
+                                      num_signers,
+                                      keypair,
+                                      nonce,
+                                      signing_commitments,
                                       &binding_factors) == 0) {
         return 0;
     }
@@ -1465,8 +1483,12 @@ static SECP256K1_WARN_UNUSED_RESULT int verify_signature_share(const secp256k1_c
         secp256k1_gej_neg(&comm_share, &comm_share);
     }
 
-    is_valid = is_signature_response_valid(ctx, signature_share, &signer_pubkey,
-                                           &lambda_i, &comm_share, challenge);
+    is_valid = is_signature_response_valid(ctx,
+                                           signature_share,
+                                           &signer_pubkey,
+                                           &lambda_i,
+                                           &comm_share,
+                                           challenge);
 
     /* Clean-up temporary variables */
     secp256k1_gej_clear(&signer_pubkey);
@@ -1515,21 +1537,33 @@ SECP256K1_API int secp256k1_frost_aggregate(
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
 
     /* Compute the binding factor(s) */
-    if (compute_binding_factors(ctx, &binding_factors, msg32, 32, num_signers, commitments) == 0) {
+    if (compute_binding_factors(ctx,
+                                &binding_factors,
+                                msg32,
+                                32,
+                                num_signers,
+                                commitments) == 0) {
         free_binding_factors(&binding_factors);
         return 0;
     }
 
     /* Compute the group commitment */
-    if (compute_group_commitment(&(aggregated_signature.r), &is_group_commitment_odd,
-                                 num_signers, &binding_factors, commitments) == 0) {
+    if (compute_group_commitment(&(aggregated_signature.r),
+                                 &is_group_commitment_odd,
+                                 num_signers,
+                                 &binding_factors,
+                                 commitments) == 0) {
         free_binding_factors(&binding_factors);
         return 0;
     }
 
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, keypair->public_keys.group_public_key);
-    compute_challenge(&challenge, msg32, 32, &group_pubkey, &(aggregated_signature.r));
+    compute_challenge(&challenge,
+                      msg32,
+                      32,
+                      &group_pubkey,
+                      &(aggregated_signature.r));
 
     /* check the validity of each participant's response */
     for (index = 0; index < num_signers; index++) {
@@ -1608,7 +1642,11 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
 
     /* Compute message-based challenge */
     secp256k1_frost_gej_deserialize(&group_pubkey, pubkey->group_public_key);
-    compute_challenge(&challenge, msg32, 32, &group_pubkey, &(aggregated_signature.r));
+    compute_challenge(&challenge,
+                      msg32,
+                      32,
+                      &group_pubkey,
+                      &(aggregated_signature.r));
 
     /* sig.r ?= (G * sig.z) - (pubkey * challenge) */
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &term1, &(aggregated_signature.z));

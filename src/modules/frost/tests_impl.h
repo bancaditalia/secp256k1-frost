@@ -126,7 +126,10 @@ void test_secp256k1_frost_nonce_create_null_context(void) {
     secp256k1_frost_keypair keypair;
 
     memset(&keypair, 0, sizeof(secp256k1_frost_keypair));
-    nonce = secp256k1_frost_nonce_create(NULL, &keypair, binding_seed, hiding_seed);
+    nonce = secp256k1_frost_nonce_create(NULL,
+                                         &keypair,
+                                         binding_seed,
+                                         hiding_seed);
     CHECK(nonce == NULL);
 }
 
@@ -139,7 +142,10 @@ void test_secp256k1_frost_nonce_create_null_keypair(void) {
     secp256k1_context *sign_ctx;
     secp256k1_frost_nonce *nonce;
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-    nonce = secp256k1_frost_nonce_create(sign_ctx, NULL, binding_seed, hiding_seed);
+    nonce = secp256k1_frost_nonce_create(sign_ctx,
+                                         NULL,
+                                         binding_seed,
+                                         hiding_seed);
     CHECK(nonce == NULL);
     secp256k1_context_destroy(sign_ctx);
 }
@@ -154,7 +160,10 @@ void test_secp256k1_frost_nonce_create_null_binding_seed(void) {
     secp256k1_frost_keypair keypair;
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     memset(&keypair, 0, sizeof(secp256k1_frost_keypair));
-    nonce = secp256k1_frost_nonce_create(sign_ctx, &keypair, NULL, hiding_seed);
+    nonce = secp256k1_frost_nonce_create(sign_ctx,
+                                         &keypair,
+                                         NULL,
+                                         hiding_seed);
     CHECK(nonce == NULL);
     secp256k1_context_destroy(sign_ctx);
 }
@@ -169,7 +178,10 @@ void test_secp256k1_frost_nonce_create_null_hiding_seed(void) {
     secp256k1_frost_keypair keypair;
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     memset(&keypair, 0, sizeof(secp256k1_frost_keypair));
-    nonce = secp256k1_frost_nonce_create(sign_ctx, &keypair, binding_seed, NULL);
+    nonce = secp256k1_frost_nonce_create(sign_ctx,
+                                         &keypair,
+                                         binding_seed,
+                                         NULL);
     CHECK(nonce == NULL);
     secp256k1_context_destroy(sign_ctx);
 }
@@ -197,7 +209,10 @@ void test_secp256k1_frost_nonce_create_and_destroy(void) {
     /* keypair initialized to 0, because it is not computed using keygen functions */
     memset(&keypair, 0, sizeof(secp256k1_frost_keypair));
     keypair.public_keys.index = 27;
-    nonce = secp256k1_frost_nonce_create(sign_ctx, &keypair, binding_seed, hiding_seed);
+    nonce = secp256k1_frost_nonce_create(sign_ctx,
+                                         &keypair,
+                                         binding_seed,
+                                         hiding_seed);
 
     CHECK(nonce != NULL);
     /* Check if index has been propagated to commitments */
@@ -227,7 +242,10 @@ void test_secp256k1_frost_nonce_create_with_different_nonce(void) {
     /* keypair initialized to 0, because it is not computed using keygen functions */
     memset(&keypair, 0, sizeof(secp256k1_frost_keypair));
     keypair.public_keys.index = 27;
-    nonce = secp256k1_frost_nonce_create(sign_ctx, &keypair, binding_seed, hiding_seed);
+    nonce = secp256k1_frost_nonce_create(sign_ctx,
+                                         &keypair,
+                                         binding_seed,
+                                         hiding_seed);
 
     CHECK(nonce != NULL);
     CHECK(nonce->commitments.index == 27);
@@ -301,9 +319,14 @@ void test_secp256k1_frost_keygen_begin_invalid_participants(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 0, /* threshold */ 2,
-                                              1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 0,
+                                              /* threshold */ 2,
+                                              1,
+                                              context,
+                                              4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -323,9 +346,14 @@ void test_secp256k1_frost_keygen_begin_invalid_threshold(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(1);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 2, /* threshold */ 0,
-                                              1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 2,
+                                              /* threshold */ 0,
+                                              1,
+                                              context,
+                                              4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -347,9 +375,14 @@ void test_secp256k1_frost_keygen_begin_threshold_gt_participants(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(threshold);
 
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 2, threshold,
-                                              1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 2,
+                                              threshold,
+                                              1,
+                                              context,
+                                              4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -367,10 +400,14 @@ void test_secp256k1_frost_keygen_begin_null_secp_context(void) {
     const unsigned char context[4] = {'t', 'e', 's', 't'};
 
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
     secp256k1_context_destroy(sign_ctx);
@@ -387,10 +424,14 @@ void test_secp256k1_frost_keygen_begin_null_commitment(void) {
     const unsigned char context[4] = {'t', 'e', 's', 't'};
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 0);
     secp256k1_context_destroy(sign_ctx);
 }
@@ -407,10 +448,14 @@ void test_secp256k1_frost_keygen_begin_null_shares(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
     secp256k1_context_destroy(sign_ctx);
@@ -427,10 +472,14 @@ void test_secp256k1_frost_keygen_begin_null_context(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, NULL, 0);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              NULL,
+                                              0);
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
     secp256k1_context_destroy(sign_ctx);
@@ -448,10 +497,14 @@ void test_secp256k1_frost_keygen_begin(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
     secp256k1_context_destroy(sign_ctx);
@@ -469,16 +522,20 @@ void test_secp256k1_frost_keygen_validate(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            sign_ctx,
-            dkg_commitment,
-            context, 4);
+    result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                            dkg_commitment,
+                                                            context,
+                                                            4);
 
     CHECK(result == 1);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -494,16 +551,20 @@ void test_secp256k1_frost_keygen_validate_null_secp_context(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            NULL,
-            dkg_commitment,
-            context, 4);
+    result = secp256k1_frost_keygen_dkg_commitment_validate(NULL,
+                                                            dkg_commitment,
+                                                            context,
+                                                            4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -519,16 +580,20 @@ void test_secp256k1_frost_keygen_validate_null_commitment(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            sign_ctx,
-            NULL,
-            context, 4);
+    result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                            NULL,
+                                                            context,
+                                                            4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -544,16 +609,20 @@ void test_secp256k1_frost_keygen_validate_null_context(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            sign_ctx,
-            dkg_commitment,
-            NULL, 4);
+    result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                            dkg_commitment,
+                                                            NULL,
+                                                            4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -574,10 +643,14 @@ void test_secp256k1_frost_keygen_validate_invalid_secret_commitment(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(threshold);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ threshold,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ threshold,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
     /* now, set the first commitments to be invalid */
@@ -589,10 +662,10 @@ void test_secp256k1_frost_keygen_validate_invalid_secret_commitment(void) {
     secp256k1_frost_gej_serialize(dkg_commitment->coefficient_commitments[0].data, &_invalidPoint);
 
     /* now, ensure that this dkg commitment is marked as invalid */
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            sign_ctx,
-            dkg_commitment,
-            context, 4);
+    result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                            dkg_commitment,
+                                                            context,
+                                                            4);
 
     CHECK(result == 0);
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -612,17 +685,21 @@ void test_secp256k1_frost_keygen_validate_invalid_context(void) {
 
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = secp256k1_frost_vss_commitments_create(2);
-    result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment, shares,
-            /* num_participants */ 3,
-            /* threshold */ 2,
-            /* participant_index */ 1, context, 4);
+    result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                              dkg_commitment,
+                                              shares,
+                                              /* num_participants */ 3,
+                                              /* threshold */ 2,
+                                              /* participant_index */ 1,
+                                              context,
+                                              4);
     CHECK(result == 1);
 
     /* calling validate with a different context */
-    result = secp256k1_frost_keygen_dkg_commitment_validate(
-            sign_ctx,
-            dkg_commitment,
-            invalid_context, sizeof(invalid_context));
+    result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                            dkg_commitment,
+                                                            invalid_context,
+                                                            sizeof(invalid_context));
     CHECK(result == 0);
 
     secp256k1_frost_vss_commitments_destroy(dkg_commitment);
@@ -660,11 +737,17 @@ void test_secp256k1_frost_keygen_finalize(void) {
         result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
                                                   dkg_commitment[index],
                                                   shares_by_participant,
-                /* num_participants */ 3, threshold,
-                                                  index + 1, context, 4);
+                                                  /* num_participants */ 3,
+                                                  threshold,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -679,7 +762,10 @@ void test_secp256k1_frost_keygen_finalize(void) {
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
-        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, index + 1, 3,
+        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                     &keypair,
+                                                     index + 1,
+                                                     3,
                                                      shares_per_participant[index],
                                                      dkg_commitment);
         CHECK(result == 1);
@@ -702,7 +788,10 @@ void test_secp256k1_frost_keygen_finalize_null_secp_context(void) {
 
     dkg_commitment = malloc(num_participants * sizeof(secp256k1_frost_vss_commitments *));
     memset(&shares_per_participant, 0, sizeof(secp256k1_frost_keygen_secret_share));
-    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, 1, num_participants,
+    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                 &keypair,
+                                                 1,
+                                                 num_participants,
                                                  &shares_per_participant,
                                                  dkg_commitment);
     CHECK(result == 0);
@@ -720,7 +809,10 @@ void test_secp256k1_frost_keygen_finalize_null_keypair(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = malloc(num_participants * sizeof(secp256k1_frost_vss_commitments *));
     memset(&shares_per_participant, 0, sizeof(secp256k1_frost_keygen_secret_share));
-    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, keypair, 1, num_participants,
+    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                 keypair,
+                                                 1,
+                                                 num_participants,
                                                  &shares_per_participant,
                                                  dkg_commitment);
     CHECK(result == 0);
@@ -739,7 +831,10 @@ void test_secp256k1_frost_keygen_finalize_null_shares(void) {
     /* Step 1. initialization */
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     dkg_commitment = malloc(num_participants * sizeof(secp256k1_frost_vss_commitments *));
-    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, 1, num_participants,
+    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                 &keypair,
+                                                 1,
+                                                 num_participants,
                                                  shares_per_participant,
                                                  dkg_commitment);
     CHECK(result == 0);
@@ -758,7 +853,10 @@ void test_secp256k1_frost_keygen_finalize_null_commitments(void) {
     /* Step 1. initialization */
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     memset(&shares_per_participant, 0, sizeof(secp256k1_frost_keygen_secret_share));
-    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, 1, num_participants,
+    result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                 &keypair,
+                                                 1,
+                                                 num_participants,
                                                  &shares_per_participant,
                                                  dkg_commitment);
     CHECK(result == 0);
@@ -797,11 +895,17 @@ void test_secp256k1_frost_keygen_finalize_is_valid(void) {
         result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
                                                   dkg_commitment[index],
                                                   shares_by_participant,
-                /* num_participants */ 3, /* threshold */ 2,
-                                                  index + 1, context, 4);
+                                                  /* num_participants */ 3,
+                                                  /* threshold */ 2,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -816,7 +920,10 @@ void test_secp256k1_frost_keygen_finalize_is_valid(void) {
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
-        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &(keypairs[index]), index + 1, 3,
+        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                     &(keypairs[index]),
+                                                     index + 1,
+                                                     3,
                                                      shares_per_participant[index],
                                                      dkg_commitment);
         CHECK(result == 1);
@@ -832,8 +939,10 @@ void test_secp256k1_frost_keygen_finalize_is_valid(void) {
         for (index = 0; index < num_participants; index++) {
             secp256k1_scalar lambda, output_partial, secret;
 
-            result = derive_interpolating_value(&lambda, keypairs[index].public_keys.index,
-                                                num_participants, signer_indexes);
+            result = derive_interpolating_value(&lambda,
+                                                keypairs[index].public_keys.index,
+                                                num_participants,
+                                                signer_indexes);
             CHECK(result == 1);
 
             secp256k1_scalar_set_b32(&secret, keypairs[index].secret, NULL);
@@ -883,11 +992,20 @@ void test_secp256k1_frost_keygen_finalize_different_participant_index(void) {
     /* Step 2. keygen begin and validate for each participant */
     for (index = 0; index < num_participants; index++) {
         uint32_t share_index;
-        result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment[index], shares_by_participant,
-                                                  3, 2, index + 1, context, 4);
+        result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                                  dkg_commitment[index],
+                                                  shares_by_participant,
+                                                  3,
+                                                  2,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -902,8 +1020,12 @@ void test_secp256k1_frost_keygen_finalize_different_participant_index(void) {
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
         /* Testing the following line: when a different participant index, result == 0 is expected. */
-        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, ((index + 2) % num_participants),
-                                                     3, shares_per_participant[index], dkg_commitment);
+        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                     &keypair,
+                                                     ((index + 2) % num_participants),
+                                                     3,
+                                                     shares_per_participant[index],
+                                                     dkg_commitment);
         CHECK(result == 1);
         CHECK(keypair.public_keys.index == ((index + 2) % num_participants));
     }
@@ -943,11 +1065,20 @@ void test_secp256k1_frost_keygen_finalize_invalid_commitments(void) {
     /* Step 2. keygen begin and validate for each participant */
     for (index = 0; index < num_participants; index++) {
         uint32_t share_index;
-        result = secp256k1_frost_keygen_dkg_begin(sign_ctx, dkg_commitment[index], shares_by_participant,
-                                                  3, 2, index + 1, context, 4);
+        result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
+                                                  dkg_commitment[index],
+                                                  shares_by_participant,
+                                                  3,
+                                                  2,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -970,8 +1101,12 @@ void test_secp256k1_frost_keygen_finalize_invalid_commitments(void) {
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
         /* Testing the following line: invalidating the commitments. */
-        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair, index + 1,
-                                                     3, shares_per_participant[index], dkg_commitment);
+        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                     &keypair,
+                                                     index + 1,
+                                                     3,
+                                                     shares_per_participant[index],
+                                                     dkg_commitment);
         CHECK(result == 0);
     }
 
@@ -1055,11 +1190,17 @@ void test_secp256k1_frost_dkg_and_sign(void) {
         result = secp256k1_frost_keygen_dkg_begin(sign_ctx,
                                                   dkg_commitment[index],
                                                   shares_by_participant,
-                /*num_participants*/  3, /* threshold */ 2,
-                                                  index + 1, context, 4);
+                                                  /*num_participants*/ 3,
+                                                  /* threshold */ 2,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -1074,7 +1215,10 @@ void test_secp256k1_frost_dkg_and_sign(void) {
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
-        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx, &keypair[index], index + 1, 3,
+        result = secp256k1_frost_keygen_dkg_finalize(sign_ctx,
+                                                     &keypair[index],
+                                                     index + 1,
+                                                     3,
                                                      shares_per_participant[index],
                                                      dkg_commitment);
         CHECK(result == 1);
@@ -1083,14 +1227,18 @@ void test_secp256k1_frost_dkg_and_sign(void) {
     /* Step 5: prepare signature commitments */
     for (index = 0; index < num_participants; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
-                                                     &keypair[index], binding_seed, hiding_seed);
+                                                     &keypair[index],
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 6: compute signature shares */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_frost_sign(sign_ctx, &(signature_share[index]),
-                             msg32, num_participants,
+        secp256k1_frost_sign(sign_ctx,
+                             &(signature_share[index]),
+                             msg32,
+                             num_participants,
                              &keypair[index],
                              nonces[index],
                              signing_commitments);
@@ -1335,8 +1483,10 @@ void test_secp256k1_frost_keygen_with_single_dealer_is_valid(void) {
         for (index = 0; index < num_participants; index++) {
             secp256k1_scalar lambda, output_partial, secret;
 
-            result = derive_interpolating_value(&lambda, keypairs[index].public_keys.index,
-                                                num_participants, signer_indexes);
+            result = derive_interpolating_value(&lambda,
+                                                keypairs[index].public_keys.index,
+                                                num_participants,
+                                                signer_indexes);
             CHECK(result == 1);
 
             secp256k1_scalar_set_b32(&secret, keypairs[index].secret, NULL);
@@ -1390,14 +1540,17 @@ void test_secp256k1_frost_single_dealer_and_sign(void) {
     for (index = 0; index < num_participants; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_frost_sign(sign_ctx, &(signature_share[index]),
-                             msg32, num_participants,
+        secp256k1_frost_sign(sign_ctx,
+                             &(signature_share[index]),
+                             msg32,
+                             num_participants,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -1427,8 +1580,10 @@ void test_secp256k1_frost_sign_null_signature_shares(void) {
     memset(&nonces, 0, sizeof(secp256k1_frost_nonce));
     memset(&signing_commitments, 0, sizeof(secp256k1_frost_nonce_commitment));
 
-    result = secp256k1_frost_sign(sign_ctx, signature_shares,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  signature_shares,
+                                  msg32,
+                                  threshold_signers,
                                   &keypairs,
                                   &nonces,
                                   &signing_commitments);
@@ -1454,8 +1609,10 @@ void test_secp256k1_frost_sign_null_msg32(void) {
     memset(&nonces, 0, sizeof(secp256k1_frost_nonce));
     memset(&signing_commitments, 0, sizeof(secp256k1_frost_nonce_commitment));
 
-    result = secp256k1_frost_sign(sign_ctx, &signature_share,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  &signature_share,
+                                  msg32,
+                                  threshold_signers,
                                   &keypairs,
                                   &nonces,
                                   &signing_commitments);
@@ -1481,8 +1638,10 @@ void test_secp256k1_frost_sign_null_keypairs(void) {
     memset(&nonces, 0, sizeof(secp256k1_frost_nonce));
     memset(&signing_commitments, 0, sizeof(secp256k1_frost_nonce_commitment));
 
-    result = secp256k1_frost_sign(sign_ctx, &signature_share,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  &signature_share,
+                                  msg32,
+                                  threshold_signers,
                                   keypairs,
                                   &nonces,
                                   &signing_commitments);
@@ -1507,8 +1666,10 @@ void test_secp256k1_frost_sign_null_nonces(void) {
     memset(&keypairs, 0, sizeof(secp256k1_frost_keypair));
     memset(&signing_commitments, 0, sizeof(secp256k1_frost_nonce_commitment));
 
-    result = secp256k1_frost_sign(sign_ctx, &signature_share,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  &signature_share,
+                                  msg32,
+                                  threshold_signers,
                                   &keypairs,
                                   nonces,
                                   &signing_commitments);
@@ -1533,8 +1694,10 @@ void test_secp256k1_frost_sign_null_signing_commitments(void) {
     memset(&keypairs, 0, sizeof(secp256k1_frost_keypair));
     memset(&nonces, 0, sizeof(secp256k1_frost_nonce));
 
-    result = secp256k1_frost_sign(sign_ctx, &signature_share,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  &signature_share,
+                                  msg32,
+                                  threshold_signers,
                                   &keypairs,
                                   &nonces,
                                   signing_commitments);
@@ -1560,8 +1723,10 @@ void test_secp256k1_frost_sign_num_signer_set_to_zero(void) {
     memset(&nonces, 0, sizeof(secp256k1_frost_nonce));
     memset(&signing_commitments, 0, sizeof(secp256k1_frost_nonce_commitment));
 
-    result = secp256k1_frost_sign(sign_ctx, &signature_share,
-                                  msg32, threshold_signers,
+    result = secp256k1_frost_sign(sign_ctx,
+                                  &signature_share,
+                                  msg32,
+                                  threshold_signers,
                                   &keypairs,
                                   &nonces,
                                   &signing_commitments);
@@ -1610,14 +1775,17 @@ void test_secp256k1_frost_sign_more_participants_than_max_to_be_invalid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        result = secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                                      msg32, num_participants + 1,
+        result = secp256k1_frost_sign(sign_verify_ctx,
+                                      &(signature_shares[index]),
+                                      msg32,
+                                      num_participants + 1,
                                       &keypairs[index],
                                       nonces[index],
                                       signing_commitments);
@@ -1676,14 +1844,17 @@ void test_secp256k1_frost_sign_aggregate_verify_to_be_valid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -1694,8 +1865,10 @@ void test_secp256k1_frost_sign_aggregate_verify_to_be_valid(void) {
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 1);
@@ -1761,14 +1934,17 @@ void test_secp256k1_frost_sign_aggregate_verify_more_parts_to_be_valid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        result = secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                                      msg32, threshold_signers,
+        result = secp256k1_frost_sign(sign_verify_ctx,
+                                      &(signature_shares[index]),
+                                      msg32,
+                                      threshold_signers,
                                       &keypairs[index],
                                       nonces[index],
                                       signing_commitments);
@@ -1780,8 +1956,10 @@ void test_secp256k1_frost_sign_aggregate_verify_more_parts_to_be_valid(void) {
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 1);
@@ -1831,7 +2009,8 @@ void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
     result = secp256k1_frost_keygen_with_dealer(sign_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -1839,7 +2018,8 @@ void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
 
         /* Step 2.b: mark nonce as used */
@@ -1848,8 +2028,10 @@ void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        result = secp256k1_frost_sign(sign_ctx, &(signature_shares[index]),
-                                      msg32, threshold_signers,
+        result = secp256k1_frost_sign(sign_ctx,
+                                      &(signature_shares[index]),
+                                      msg32,
+                                      threshold_signers,
                                       &keypairs[index],
                                       nonces[index],
                                       signing_commitments);
@@ -1895,7 +2077,8 @@ void test_secp256k1_frost_with_larger_params_to_be_valid(void) {
     result = secp256k1_frost_keygen_with_dealer(sign_verify_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -1908,14 +2091,17 @@ void test_secp256k1_frost_with_larger_params_to_be_valid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -1926,8 +2112,10 @@ void test_secp256k1_frost_with_larger_params_to_be_valid(void) {
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 1);
@@ -1979,7 +2167,8 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
     result = secp256k1_frost_keygen_with_dealer(sign_verify_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -1992,14 +2181,17 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
     for (index = 0; index < num_participants; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, num_participants,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             num_participants,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2010,8 +2202,10 @@ void test_secp256k1_frost_aggregate_with_all_signers_to_be_valid(void) {
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            num_participants);
         CHECK(result == 1);
@@ -2051,8 +2245,10 @@ void test_secp256k1_frost_aggregate_null_secp_context(void) {
     }
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2079,8 +2275,10 @@ void test_secp256k1_frost_aggregate_null_signature(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2110,8 +2308,10 @@ void test_secp256k1_frost_aggregate_null_message(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2140,8 +2340,10 @@ void test_secp256k1_frost_aggregate_null_keypair(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2170,8 +2372,10 @@ void test_secp256k1_frost_aggregate_null_pubkeys(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2200,8 +2404,10 @@ void test_secp256k1_frost_aggregate_null_signing_commitments(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2230,8 +2436,10 @@ void test_secp256k1_frost_aggregate_null_signature_shares(void) {
     sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     result = secp256k1_frost_aggregate(sign_ctx,
                                        signature,
-                                       msg32, &keypair,
-                                       public_keys, signing_commitments,
+                                       msg32,
+                                       &keypair,
+                                       public_keys,
+                                       signing_commitments,
                                        signature_shares,
                                        num_participants);
     CHECK(result == 0);
@@ -2267,7 +2475,8 @@ void test_secp256k1_frost_aggregate_with_more_participants_than_max_to_be_invali
     result = secp256k1_frost_keygen_with_dealer(sign_verify_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -2280,14 +2489,17 @@ void test_secp256k1_frost_aggregate_with_more_participants_than_max_to_be_invali
     for (index = 0; index < num_participants; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, num_participants,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             num_participants,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2298,8 +2510,10 @@ void test_secp256k1_frost_aggregate_with_more_participants_than_max_to_be_invali
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            num_participants + 1);
         CHECK(result == 0);
@@ -2345,7 +2559,8 @@ void test_secp256k1_frost_aggregate_with_few_signature_share_to_be_invalid(void)
     result = secp256k1_frost_keygen_with_dealer(sign_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -2358,14 +2573,17 @@ void test_secp256k1_frost_aggregate_with_few_signature_share_to_be_invalid(void)
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2381,8 +2599,10 @@ void test_secp256k1_frost_aggregate_with_few_signature_share_to_be_invalid(void)
             /* Step 4: aggregate signature shares */
             result = secp256k1_frost_aggregate(sign_ctx,
                                                signature,
-                                               msg32, &keypairs[index],
-                                               public_keys, signing_commitments,
+                                               msg32,
+                                               &keypairs[index],
+                                               public_keys,
+                                               signing_commitments,
                                                signature_shares,
                                                num_signature_share_to_consider);
             CHECK(result == 0);
@@ -2441,14 +2661,17 @@ void test_secp256k1_frost_aggregate_with_invalid_signature_share_to_be_invalid(v
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2462,8 +2685,10 @@ void test_secp256k1_frost_aggregate_with_invalid_signature_share_to_be_invalid(v
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 0);
@@ -2508,7 +2733,8 @@ void test_secp256k1_frost_aggregate_with_invalid_group_key_to_be_invalid(void) {
     result = secp256k1_frost_keygen_with_dealer(sign_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -2521,14 +2747,17 @@ void test_secp256k1_frost_aggregate_with_invalid_group_key_to_be_invalid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2540,8 +2769,10 @@ void test_secp256k1_frost_aggregate_with_invalid_group_key_to_be_invalid(void) {
         memset(keypairs[index].public_keys.group_public_key, 0, 64);
         result = secp256k1_frost_aggregate(sign_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 0);
@@ -2586,7 +2817,8 @@ void test_secp256k1_frost_verify_with_invalid_group_key_to_be_invalid(void) {
     result = secp256k1_frost_keygen_with_dealer(sign_verify_ctx,
                                                 dealer_commitments,
                                                 shares_by_participant,
-                                                keypairs, num_participants,
+                                                keypairs,
+                                                num_participants,
                                                 threshold_signers);
     CHECK(result == 1);
 
@@ -2599,14 +2831,17 @@ void test_secp256k1_frost_verify_with_invalid_group_key_to_be_invalid(void) {
     for (index = 0; index < threshold_signers; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
                                                      &keypairs[index],
-                                                     binding_seed, hiding_seed);
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 3: compute signature shares */
     for (index = 0; index < threshold_signers; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, threshold_signers,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold_signers,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2617,8 +2852,10 @@ void test_secp256k1_frost_verify_with_invalid_group_key_to_be_invalid(void) {
         /* Step 4: aggregate signature shares */
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold_signers);
         CHECK(result == 1);
@@ -2679,11 +2916,17 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_to_be_valid(void) {
         result = secp256k1_frost_keygen_dkg_begin(sign_verify_ctx,
                                                   dkg_commitment[index],
                                                   shares_by_participant,
-                /*num_participants*/  3, /* threshold */ 2,
-                                                  index + 1, context, 4);
+                                                  /*num_participants*/ 3,
+                                                  /* threshold */ 2,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_verify_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_verify_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -2698,7 +2941,10 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_to_be_valid(void) {
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
-        result = secp256k1_frost_keygen_dkg_finalize(sign_verify_ctx, &keypairs[index], index + 1, 3,
+        result = secp256k1_frost_keygen_dkg_finalize(sign_verify_ctx,
+                                                     &keypairs[index],
+                                                     index + 1,
+                                                     3,
                                                      shares_per_participant[index],
                                                      dkg_commitment);
         CHECK(result == 1);
@@ -2712,14 +2958,18 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_to_be_valid(void) {
     /* Step 5: prepare signature commitments */
     for (index = 0; index < num_participants; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
-                                                     &keypairs[index], binding_seed, hiding_seed);
+                                                     &keypairs[index],
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 6: compute signature shares */
     for (index = 0; index < num_participants; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, num_participants,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             num_participants,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2729,8 +2979,10 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_to_be_valid(void) {
         unsigned char signature[64];
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            num_participants);
         CHECK(result == 1);
@@ -2790,11 +3042,17 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_more_parts_to_be_valid(void)
         result = secp256k1_frost_keygen_dkg_begin(sign_verify_ctx,
                                                   dkg_commitment[index],
                                                   shares_by_participant,
-                                                  num_participants, threshold,
-                                                  index + 1, context, 4);
+                                                  num_participants,
+                                                  threshold,
+                                                  index + 1,
+                                                  context,
+                                                  4);
         CHECK(result == 1);
 
-        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_verify_ctx, dkg_commitment[index], context, 4);
+        result = secp256k1_frost_keygen_dkg_commitment_validate(sign_verify_ctx,
+                                                                dkg_commitment[index],
+                                                                context,
+                                                                4);
         CHECK(result == 1);
 
         /* Step 3. dispatching shares for single participant */
@@ -2809,7 +3067,9 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_more_parts_to_be_valid(void)
 
     /* Step 4. keygen finalize for each participant */
     for (index = 0; index < num_participants; index++) {
-        result = secp256k1_frost_keygen_dkg_finalize(sign_verify_ctx, &keypairs[index], index + 1,
+        result = secp256k1_frost_keygen_dkg_finalize(sign_verify_ctx,
+                                                     &keypairs[index],
+                                                     index + 1,
                                                      num_participants,
                                                      shares_per_participant[index],
                                                      dkg_commitment);
@@ -2824,14 +3084,18 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_more_parts_to_be_valid(void)
     /* Step 5: prepare signature commitments */
     for (index = 0; index < threshold; index++) {
         nonces[index] = secp256k1_frost_nonce_create(sign_verify_ctx,
-                                                     &keypairs[index], binding_seed, hiding_seed);
+                                                     &keypairs[index],
+                                                     binding_seed,
+                                                     hiding_seed);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
     }
 
     /* Step 6: compute signature shares */
     for (index = 0; index < threshold; index++) {
-        secp256k1_frost_sign(sign_verify_ctx, &(signature_shares[index]),
-                             msg32, threshold,
+        secp256k1_frost_sign(sign_verify_ctx,
+                             &(signature_shares[index]),
+                             msg32,
+                             threshold,
                              &keypairs[index],
                              nonces[index],
                              signing_commitments);
@@ -2841,8 +3105,10 @@ void test_secp256k1_frost_dkg_sign_aggregate_verify_more_parts_to_be_valid(void)
         unsigned char signature[64];
         result = secp256k1_frost_aggregate(sign_verify_ctx,
                                            signature,
-                                           msg32, &keypairs[index],
-                                           public_keys, signing_commitments,
+                                           msg32,
+                                           &keypairs[index],
+                                           public_keys,
+                                           signing_commitments,
                                            signature_shares,
                                            threshold);
         CHECK(result == 1);
@@ -2942,13 +3208,16 @@ void test_secp256k1_frost_pubkey_save_and_load(void) {
     secp256k1_frost_gej_serialize(reference_pubkey.group_public_key, &ref_gpk);
 
     /* Save pubkey and check if function returns 1 */
-    CHECK(secp256k1_frost_pubkey_save(saved_pubkey, saved_group_pubkey,
+    CHECK(secp256k1_frost_pubkey_save(saved_pubkey,
+                                      saved_group_pubkey,
                                       &reference_pubkey) == 1);
 
     /* Load pubkey and check if function returns 1 */
     CHECK(secp256k1_frost_pubkey_load(&loaded_pubkey,
-                                      reference_pubkey.index, reference_pubkey.max_participants,
-                                      saved_pubkey, saved_group_pubkey) == 1);
+                                      reference_pubkey.index,
+                                      reference_pubkey.max_participants,
+                                      saved_pubkey,
+                                      saved_group_pubkey) == 1);
 
     /* Check equality on every field of secp256k1_frost_pubkey */
     secp256k1_frost_gej_deserialize(&test_pk, loaded_pubkey.public_key);
