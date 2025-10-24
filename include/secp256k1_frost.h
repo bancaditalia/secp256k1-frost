@@ -46,6 +46,11 @@ extern "C" {
 #endif
 
 /* ------ Data structures ------ */
+
+/* Share of the group secret key.
+ *
+ * The secret share results from evaluating the (generator) Shamir polynomial in the receiver index point.
+ */
 typedef struct {
     uint32_t generator_index;
     uint32_t receiver_index;
@@ -56,6 +61,7 @@ typedef struct {
     unsigned char data[64];
 } secp256k1_frost_vss_commitment;
 
+/* Zero-knowledge proof of knowledge for of secret Shamir polynomial coefficients. */
 typedef struct {
     uint32_t index;
     uint32_t num_coefficients;
@@ -64,12 +70,14 @@ typedef struct {
     unsigned char zkp_z[32];
 } secp256k1_frost_vss_commitments;
 
+/* Commitment to nonce used for signing. */
 typedef struct {
     uint32_t index;
     unsigned char hiding[64];
     unsigned char binding[64];
 } secp256k1_frost_nonce_commitment;
 
+/* Nonce used for signing. */
 typedef struct {
     int used; /* 1 if true, 0 if false */
     unsigned char hiding[32];
@@ -77,6 +85,7 @@ typedef struct {
     secp256k1_frost_nonce_commitment commitments;
 } secp256k1_frost_nonce;
 
+/* Opaque representation of a FROST public key */
 typedef struct {
     uint32_t index;
     uint32_t max_participants;
@@ -84,11 +93,16 @@ typedef struct {
     unsigned char group_public_key[64];
 } secp256k1_frost_pubkey;
 
+/* Participant keypair used for signing.
+ *
+ * This structure holds the participant's secret key share.
+ */
 typedef struct {
     unsigned char secret[32];
     secp256k1_frost_pubkey public_keys;
 } secp256k1_frost_keypair;
 
+/* Representation of a FROST signature share  */
 typedef struct {
     uint32_t index;
     unsigned char response[32];
