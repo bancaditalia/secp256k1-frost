@@ -97,13 +97,16 @@ typedef struct {
 /* ------ Keygen-related functions ------ */
 
 /*
- * Initialize secp256k1_frost_keypair using the compact (33-bytes) representation of public keys.
+ * Initialize a participant's public keys from compact (33-bytes) serialized keys.
+ *
+ * Used to load key material from external storages.
+ *
  *  Returns 1 on success, 0 on failure.
- *  Out:          pubkey: pointer to a secp256k1_frost_pubkey to update.
- *  In:            index: identifier of participant.
- *      max_participants: maximum number of participants (coherent with group public key).
- *              pubkey33: pointer to compact public key (33 bytes).
- *        group_pubkey33: pointer to compact group public key (33 bytes).
+ *  Out:          pubkey: pointer to the destination secp256k1_frost_pubkey structure.
+ *  In:            index: participant index.
+ *      max_participants: total number of participants.
+ *              pubkey33: pointer to the compact (33-bytes) participant public key.
+ *        group_pubkey33: pointer to the compact (33-bytes) group public key.
  */
 SECP256K1_API int secp256k1_frost_pubkey_load(
     secp256k1_frost_pubkey *pubkey,
@@ -114,9 +117,10 @@ SECP256K1_API int secp256k1_frost_pubkey_load(
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(4) SECP256K1_ARG_NONNULL(5);
 
 /*
- * Return the compact (33-bytes) representation of the public keys in secp256k1_frost_keypair.
- *  Returns 1 on success, 0 on failure.
- *  Out:        pubkey33: pointer to a 33-byte array where the public key will be stored.
+ * Export public key material to compact (33-bytes) format
+ *
+ * Returns 1 on success, 0 on failure.
+ *  Out:        pubkey33: pointer to a 33-byte array where the participant public key will be stored.
  *        group_pubkey33: pointer to a 33-byte array where the group public key will be stored.
  *  In:           pubkey: pointer to an initialized secp256k1_frost_pubkey.
  */
@@ -127,7 +131,8 @@ SECP256K1_API int secp256k1_frost_pubkey_save(
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
 /*
- * Initialize a secp256k1_frost_pubkey using information in secp256k1_frost_keypair.
+ * Derive a secp256k1_frost_pubkey structure from a given keypair (`secp256k1_frost_keypair`).
+ *
  *  Returns 1 on success, 0 on failure.
  *  Out:   pubkey: pointer to a secp256k1_frost_pubkey to update.
  *  In:   keypair: pointer to an initialized secp256k1_frost_keypair.
@@ -138,7 +143,9 @@ SECP256K1_API int secp256k1_frost_pubkey_from_keypair(
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
 
 /*
- * Create a secp256k1 frost vss_commitments object (in dynamically allocated memory).
+ * Create a Verifiable Secret Sharing (VSS) commitments container.
+ *
+ *  Dynamically allocates memory to hold polynomial commitments used in key generation.
  *  This function uses malloc to allocate memory.
  *
  *  Returns: a newly created vss_commitments object.
@@ -149,11 +156,10 @@ SECP256K1_API secp256k1_frost_vss_commitments *secp256k1_frost_vss_commitments_c
 );
 
 /*
- * Destroy a secp256k1 vss_commitments object (created in dynamically allocated memory).
+ * Destroy a VSS commitments container previously created by `secp256k1_frost_vss_commitments_create()`.
  *
- *  The vss_commitments pointer should not be used afterwards.
+ *  The vss_commitments pointer should not be used afterward.
  *
- *  The nonce to destroy must have been created using secp256k1_frost_nonce_create.
  *  Args:   vss_commitments: an existing vss_commitments to destroy,
  *                           constructed using secp256k1_frost_vss_commitments_create
  */
@@ -162,11 +168,13 @@ SECP256K1_API void secp256k1_frost_vss_commitments_destroy(
 ) SECP256K1_ARG_NONNULL(1);
 
 /*
- * Create a secp256k1 frost nonce object (in dynamically allocated memory).
+ * Create fresh FROST nonce for signing.
  *
+ *  Generates two random nonces (hiding and binding) and their corresponding
+ *  public commitments. Nonces must never be reused.
  *  This function uses malloc to allocate memory.
  *
- *  Returns: a newly created nonce object.
+ *  Returns: pointer to a newly allocated nonce object.
  *  Args:         ctx: pointer to a context object, initialized for signing.
  *  In:       keypair: pointer to an initialized keypair.
  *     binding_seed32: pointer to a 32-byte random seed (NULL resets to initial state)
@@ -180,24 +188,23 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2);
 
 /*
- *  Destroy a secp256k1 nonce object (created in dynamically allocated memory).
+ * Destroy a FROST nonce created with secp256k1_frost_nonce_create().
  *
- *  The context pointer should not be used afterwards.
+ *  The nonce pointer should not be used afterward.
  *
- *  The nonce to destroy must have been created using secp256k1_frost_nonce_create.
- *  Args:   nonce: an existing nonce to destroy, constructed using
- *               secp256k1_frost_nonce_create
+ *  Args:   nonce: an existing nonce to destroy.
  */
 SECP256K1_API void secp256k1_frost_nonce_destroy(
     secp256k1_frost_nonce *nonce
 ) SECP256K1_ARG_NONNULL(1);
 
 /*
- * Create a secp256k1 frost keypair object (in dynamically allocated memory).
+ * Create a participant keypair object.
  *
+ *  Allocates and initializes a keypair structure for the given participant index.
  *  This function uses malloc to allocate memory.
  *
- *  Returns: a newly created keypair object.
+ *  Returns: pointer to the new keypair object.
  *  Args:         ctx: pointer to a context object, initialized for signing.
  */
 SECP256K1_API secp256k1_frost_keypair *secp256k1_frost_keypair_create(
@@ -205,39 +212,36 @@ SECP256K1_API secp256k1_frost_keypair *secp256k1_frost_keypair_create(
 );
 
 /*
- * Destroy a secp256k1 frost keypair object (created in dynamically allocated memory).
+ * Destroy a keypair object previously created by secp256k1_frost_keypair_create().
  *
- *  The context pointer should not be used afterwards.
+ *  The keypair pointer should not be used afterward.
  *
- *  The keypair to destroy must have been created using secp256k1_frost_keypair_create.
- *  Args:   nonce: an existing keypair to destroy, constructed using secp256k1_frost_keypair_create
+ *  Args:   nonce: an existing keypair to destroy.
  */
 SECP256K1_API void secp256k1_frost_keypair_destroy(
     secp256k1_frost_keypair *keypair
 ) SECP256K1_ARG_NONNULL(1);
 
 /*
- * secp256k1_frost_keygen_dkg_begin() is performed by each participant to initialize a Pedersen
+ * Begin the distributed key generation (DKG) – Phase 1: Commitment generation.
  *
- * This function assumes there is an additional layer which performs the
- * distribution of secret_key_shares to their intended participants.
+ *  Each participant samples a random polynomial, produces its
+ *  commitments and secret shares, and proves knowledge of its secret term.
  *
- * Note that while secp256k1_frost_keygen_dkg_begin() returns Shares, these secret_key_shares
- * should be sent *after* participants have exchanged commitments via
- * secp256k1_frost_keygen_dkg_commitment_validate(). So, the caller of
- * secp256k1_frost_keygen_dkg_begin() should store secret_key_shares until after
- * secp256k1_frost_keygen_dkg_commitment_validate() is complete, and then
- * exchange secret_key_shares via secp256k1_frost_keygen_dkg_finalize().
+ *  Secret shares (secret_key_shares) must be stored locally and distributed only
+ *  after commitments are exchanged and validated
+ *  (using `secp256k1_frost_keygen_dkg_commitment_validate()`).
+ *  Secret shares are exchanged via `secp256k1_frost_keygen_dkg_finalize()`.
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
  *  Out:  vss_commitments: pointer to a secp256k1_frost_vss_commitments to store the DKG first phase result.
  *      secret_key_shares: pointer to an array of num_shares secret_key_shares
  *  In:  num_participants: number of participants and secret_key_shares that will be produced.
- *              threshold: validity threshold for signatures.
+ *              threshold: minimum number of participants needed to compute a valid signature.
  *        generator_index: index of the participant running the DKG.
- *                context: pointer to a char array containing DKG context tag.
- *         context_length: length of the char array with the DKG context.
+ *                context: pointer to the DKG context tag.
+ *         context_length: length of the DKG context in bytes.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
         const secp256k1_context *ctx,
@@ -251,21 +255,17 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(7);
 
 /*
- * secp256k1_frost_keygen_dkg_commitment_validate() gathers commitments from
- * peers and validates the zero knowledge proof of knowledge for the peer's
- * secret term. It returns a list of all participants who failed the check, a
- * list of commitments for the peers that remain in a valid state, and an error
- * term.
+ * Validate commitments received from peers (DKG Phase 2).
  *
- * Here, we return a DKG commitment that is explicitly marked as valid, to
- * ensure that this step of the protocol is performed before going on to
- * secp256k1_frost_keygen_dkg_finalize().
+ *  Verifies the zero-knowledge proof of knowledge for each peer's secret
+ *  coefficient. Participants failing validation are considered invalid and
+ *  should be excluded from further rounds.
  *
  * Returns 1 on success, 0 on failure.
  *  Args:                        ctx: pointer to a context object, initialized for signing.
  *  In:              peer_commitment: pointer to commitment to validate.
- *                           context: pointer to a char array containing DKG context tag.
- *                    context_length: length of the char array with the DKG context.
+ *                           context: pointer to the DKG context tag.
+ *                    context_length: length of the DKG context in bytes.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commitment_validate(
         const secp256k1_context *ctx,
@@ -275,15 +275,18 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
 
 /*
- * secp256k1_frost_keygen_dkg_finalize() finalizes the distributed key generation protocol.
- * It is performed once per participant.
+ * Finalize distributed key generation (DKG Phase 3).
+ *
+ *  Combines valid secret shares and commitments to derive each participant’s
+ *  keypair (private share and corresponding public key). Must be called once per
+ *  participant after all valid commitments and shares have been exchanged.
  *
  * Returns 1 on success, 0 on failure.
  *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out:         keypair: pointer to a frost_keypair to store the generated keypairs.
+ *  Out:         keypair: pointer to a secp256k1_frost_keypair where the participant's keypair is stored.
  *  In:            index: participant index.
  *      num_participants: number of shares and commitments.
- *                shares: shares of the current participant.
+ *                shares: secret shares received by the current participant during DKG.
  *           commitments: all participants' commitments exchanged during DKG.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finalize(
@@ -296,16 +299,18 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(5) SECP256K1_ARG_NONNULL(6);
 
 /*
- * secp256k1_frost_keygen_with_dealer() allows to create keygen for each participant.
- * This function is intended to be executed by a trusted dealer that generates and
- * distributes the secret secret_key_shares.
+ * Dealer-based key generation.
+ *
+ *  Performed by a trusted dealer who samples the group secret polynomial,
+ *  computes commitments, and distributes valid secret shares and keypairs to
+ *  participants.
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:             ctx: pointer to a context object, initialized for signing.
- *  Out:  vss_commitments: pointer to a secp256k1_frost_vss_commitments to store the dealer commitments.
- *      secret_key_shares: pointer to an array of num_shares shares
- *               keypairs: pointer to a frost_keypair to store the generated keypairs.
- *  In:  num_participants: number of participants and shares that will be produced.
+ *  Out:  vss_commitments: pointer to the structure where the commitments of the Shamir polynomial coefficients will be stored.
+ *      secret_key_shares: pointer to an array of `num_participant` secret key shares
+ *               keypairs: pointer to an array where to store the generated keypairs for each participant.
+ *  In:  num_participants: the number of participants and shares that will be produced.
  *              threshold: validity threshold for signatures.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
