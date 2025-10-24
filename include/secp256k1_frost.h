@@ -7,6 +7,20 @@
 #ifndef SECP256K1_FROST_H
 #define SECP256K1_FROST_H
 
+/* This module provides an implementation of the two-round FROST signing protocol.
+ *
+ * FROST is described in https://eprint.iacr.org/2020/852 by Komlo and Goldberg.
+ * Later, the IETF standardized the protocol under the RFC 9591
+ * (https://www.rfc-editor.org/rfc/rfc9591).
+ *
+ * FROST signatures can be issued after a threshold number of entities cooperate to compute
+ * a signature, allowing for improved distribution of trust and redundancy with respect to
+ * a secret key. FROST depends only on a prime-order group and cryptographic hash function.
+ *
+ * The implementation of FROST included in this module uses secp256k1 for the group and
+ * SHA-256 for computing the hash functions.
+ */
+
 /*
  * The following inclusions are needed to bring uint32_t in scope in a platform
  * and language independent way.
@@ -308,15 +322,28 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
 /*
  * Create a FROST signature share.
  *
+ * Each participant generates a signature share for a given message using its
+ * private key, nonce, and the set of signing commitments of all participants.
+ * This corresponds to "Round Two - Signature Share Generation" in RFC 9591 §5.2.
+ *      https://www.rfc-editor.org/rfc/rfc9591#name-round-two-signature-share-g
+ *
+ * The resulting signature share must be sent back to the Coordinator for
+ * aggregation. After producing the share, the signer MUST securely delete
+ * the nonce and its corresponding commitment, as nonces must never be reused.
+ *
  *  Returns 1 on success, 0 on failure.
  *  Args:             ctx: pointer to a context object, initialized for signing.
  *  Out:  signature_share: pointer to the struct that will hold the signature share.
  *  In:               msg: pointer to the message to be signed.
  *             msg_length: length of the message in bytes.
- *            num_signers: number of signers
- *                keypair: pointer to an initialized keypair.
- *                  nonce: pointer to an initialized nonce.
- *    signing_commitments: pointer to an array of num_signers signing commitments.
+ *            num_signers: total number of signers participating in this round.
+ *                keypair: pointer to an initialized keypair (participant's secret and public key).
+ *                  nonce: pointer to an initialized nonce associated with this round.
+ *    signing_commitments: pointer to an array of `num_signers` nonce commitments for all participants.
+ *
+ *  Notes:
+ *   - Each signer must ensure its identifier and commitments appear in `signing_commitments`.
+ *   - The nonce must not be reused for another signing session.
  */
 SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_context *ctx,
@@ -331,18 +358,28 @@ SECP256K1_API int secp256k1_frost_sign(
 SECP256K1_ARG_NONNULL(8);
 
 /*
- * Combine FROST signature shares to obtain an aggregated signature.
+ * Combine FROST signature shares into an aggregated signature.
+ *
+ * The Coordinator collects valid signature shares from participants and
+ * aggregates them into a final signature (R, z), as defined in RFC 9591 §5.3.
+ *      https://www.rfc-editor.org/rfc/rfc9591#name-signature-share-aggregation
  *
  *  Returns 1 on success, 0 on failure.
  *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:         sig64: pointer to a 64-byte array to store the serialized signature.
+ *  Out:         sig64: pointer to a 64-byte array for the serialized signature.
  *  In:            msg: pointer to the message that was signed.
  *          msg_length: length of the message in bytes.
- *             keypair: pointer to an initialized keypair.
- *         public_keys: pointer to an array of public keys of (actual) signers.
- *         commitments: pointer to an array of commitments.
- *    signature_shares: pointer to an array of signature shares.
- *         num_signers: number of signers.
+ *             keypair: pointer to an initialized keypair of the coordinator (group info holder).
+ *         public_keys: pointer to an array of all participating signers' public keys.
+ *         commitments: pointer to an array of nonce commitments from the signers.
+ *    signature_shares: pointer to an array of signature shares produced by the signers
+ *         num_signers: number of signers contributing valid shares.
+ *
+ * Notes:
+ *   - Before aggregation, each signature share is validated; invalid shares
+ *     cause the aggregation to fail.
+ *   - The resulting signature should be verified against the group public key
+ *     using `secp256k1_frost_verify()` before publishing or releasing it.
  */
 SECP256K1_API int secp256k1_frost_aggregate(
         const secp256k1_context *ctx,
@@ -358,15 +395,21 @@ SECP256K1_API int secp256k1_frost_aggregate(
 SECP256K1_ARG_NONNULL(6) SECP256K1_ARG_NONNULL(7) SECP256K1_ARG_NONNULL(8);
 
 /*
- * Verify a FROST aggregated signature.
+ * Verify a FROST aggregate signature under the group public key.
  *
- *  Returns: 1: correct signature
- *           0: incorrect signature
- *  Args:    ctx: a secp256k1 context object, initialized for verification.
- *  In:    sig64: pointer to the 64-byte signature to verify.
- *           msg: pointer the message that was signed.
- *    msg_length: the length of the message in bytes.
- *        pubkey: pointer to (group) pubkey (cannot be NULL).
+ * This function verifies that a FROST aggregate signature (R, z) is valid
+ * for the given message and group public key, as specified in EFC 9591 §5.3.
+ *      https://www.rfc-editor.org/rfc/rfc9591#name-signature-share-aggregation
+ *
+ * Typically used by the Coordinator (or external verifiers) after the
+ * aggregation step to ensure the final signature is correct before publication.
+
+ *  Returns 1 on success (correct signature), 0 on failure (incorrect signature).
+ *  Args:      ctx: pointer to a secp256k1 context object, initialized for verification.
+ *  In:      sig64: pointer to a byte array holding the signature to verify.
+ *             msg: pointer the message that was signed.
+ *      msg_length: the length of the message in bytes.
+ *          pubkey: pointer to group public key.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_verify(
         const secp256k1_context *ctx,
