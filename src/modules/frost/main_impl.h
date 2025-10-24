@@ -21,18 +21,21 @@ static const unsigned char hash_context_prefix_h3[31] = {'F', 'R', 'O', 'S', 'T'
 static const unsigned char hash_context_prefix_h4[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'm', 's', 'g'};
 static const unsigned char hash_context_prefix_h5[29] = {'F', 'R', 'O', 'S', 'T', '-', 's', 'e', 'c', 'p', '2', '5', '6', 'k', '1', '-', 'S', 'H', 'A', '2', '5', '6', '-', 'v', '1', '1', 'c', 'o', 'm'};
 
+/* Coefficients of the random Shamir polynomial used to share a secret value */
 typedef struct {
     uint32_t index;
     uint32_t num_coefficients;
     secp256k1_scalar *coefficients;
 } shamir_coefficients;
 
+/* Binding factors of the FROST signature participants, used to compute the group commitment */
 typedef struct {
     uint32_t num_binding_factors;
     uint32_t *participant_indexes;
     secp256k1_scalar *binding_factors;
 } secp256k1_frost_binding_factors;
 
+/* FROST signature */
 typedef struct {
     /* R is the group commitment  */
     secp256k1_gej r;
@@ -471,9 +474,9 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_random_coefficients(shamir_coef
  *  Commit to Verifiable Secret Shares
  *
  *  Args:            ctx: a secp256k1 context object, initialized for verification.
- *  Out: vss_commitments: pointer to shamir_coefficients where coefficients will be stored.
- *  In:     coefficients: pointer to shamir_coefficients where coefficients will be stored.
- *                secret: secret to be used as known term of the Shamir polynomial
+ *  Out: vss_commitments: pointer to the structure where the coefficient commitments will be stored.
+ *  In:     coefficients: pointer to the array of the Shamir polynomial coefficients.
+ *                secret: secret to be used as the known term of the Shamir polynomial.
  *             threshold: min number of participants needed to reconstruct the secret.
  */
 static void vss_commit(const secp256k1_context *ctx,
@@ -537,11 +540,12 @@ static void polynomial_evaluate(secp256k1_scalar *value,
  * Shard secret for each participant by evaluating the Shamir polynomial.
  *
  *  Returns: 1: on success; 0: on failure
- *  Out: secret_key_shares: pointer to shamir_coefficients where coefficients will be stored (expected to be already allocated).
- *  In:    generator_index: index of participant generating coefficients.
+ *  Out: secret_key_shares: pointer to the num_participants secret shares
+ *                          computed by generator (with id `generator_index`)
+ *  In:    generator_index: index of the participant generating the shares.
  *        num_participants: number of participants to the secret sharing
- *            coefficients: pointer to shamir_coefficients.
- *                  secret: secret to be used as known term of the Shamir polynomial.
+ *            coefficients: pointer to the coefficients of the Shamir polynomial.
+ *                  secret: secret to be used as the known term of the Shamir polynomial.
  */
 static void secret_share_shard(secp256k1_frost_keygen_secret_share *secret_key_shares,
                                uint32_t generator_index, uint32_t num_participants,
@@ -575,7 +579,7 @@ static void secret_share_shard(secp256k1_frost_keygen_secret_share *secret_key_s
  *  In:  num_participants: number of secret_key_shares and commitments.
  *              threshold: Signature threshold
  *        generator_index: participant index.
- *                 secret: Secret value to use as constant term of the polynomial
+ *                 secret: Secret value to use as the constant term of the polynomial
  */
 static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(const secp256k1_context *ctx,
                                                                                secp256k1_frost_vss_commitments *vss_commitments,
@@ -903,7 +907,7 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
         return 0;
     }
 
-    /* Generate random as secret */
+    /* Generate random as the secret */
     if (initialize_random_scalar(&secret) == 0) {
         return 0;
     }
