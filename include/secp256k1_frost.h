@@ -7,6 +7,10 @@
 #ifndef SECP256K1_FROST_H
 #define SECP256K1_FROST_H
 
+/*******************************************************
+ * SECTION: Overview
+ *******************************************************/
+
 /* This module provides an implementation of the two-round FROST signing protocol.
  *
  * FROST is described in https://eprint.iacr.org/2020/852 by Komlo and Goldberg.
@@ -45,7 +49,9 @@
 extern "C" {
 #endif
 
-/* ------ Data structures ------ */
+/*******************************************************
+ * SECTION: Data Structures
+ *******************************************************/
 
 /* Share of the group secret key.
  *
@@ -108,8 +114,9 @@ typedef struct {
     unsigned char response[32];
 } secp256k1_frost_signature_share;
 
-/* ------ Keygen-related functions ------ */
-
+/*******************************************************
+ * SECTION: Data management (Key, nonce, and commitment)
+ *******************************************************/
 /*
  * Initialize a participant's public keys from compact (33-bytes) serialized keys.
  *
@@ -236,6 +243,10 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(
     secp256k1_frost_keypair *keypair
 ) SECP256K1_ARG_NONNULL(1);
 
+/*******************************************************
+* SECTION: Key Generation
+*******************************************************/
+
 /*
  * Begin the distributed key generation (DKG) – Phase 1: Commitment generation.
  *
@@ -336,7 +347,9 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
         uint32_t threshold
 ) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
 
-/* ------ Signing-related functions ------ */
+/*******************************************************
+ * SECTION: Signing
+ *******************************************************/
 
 /*
  * Create a FROST signature share.
