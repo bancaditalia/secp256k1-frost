@@ -316,8 +316,8 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
  *  signatures from being valid in multiple contexts by accident.
  *
  *  Returns 1 on success, 0 on failure.
- *  Args:          ctx: pointer to a context object, initialized for signing.
- *  Out:  signature_share: pointer to a 64-byte array to store the serialized signature.
+ *  Args:             ctx: pointer to a context object, initialized for signing.
+ *  Out:  signature_share: pointer to the struct that will hold the signature share.
  *  In:             msg32: the 32-byte message being signed.
  *            num_signers: number of signers
  *                keypair: pointer to an initialized keypair.
