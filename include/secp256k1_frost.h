@@ -287,12 +287,12 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_finali
  * distributes the secret secret_key_shares.
  *
  *  Returns 1 on success, 0 on failure.
- *  Args:            ctx: pointer to a context object, initialized for signing.
- *  Out: share_commitment: pointer to a secp256k1_frost_vss_commitments to store the dealer commitments.
- *                shares: pointer to an array of num_shares shares
- *              keypairs: pointer to a frost_keypair to store the generated keypairs.
- *  In: num_participants: number of participants and shares that will be produced.
- *             threshold: validity threshold for signatures.
+ *  Args:             ctx: pointer to a context object, initialized for signing.
+ *  Out:  vss_commitments: pointer to a secp256k1_frost_vss_commitments to store the dealer commitments.
+ *      secret_key_shares: pointer to an array of num_shares shares
+ *               keypairs: pointer to a frost_keypair to store the generated keypairs.
+ *  In:  num_participants: number of participants and shares that will be produced.
+ *              threshold: validity threshold for signatures.
  */
 SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_dealer(
         const secp256k1_context *ctx,
