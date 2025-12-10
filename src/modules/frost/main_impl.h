@@ -1053,7 +1053,6 @@ static void encode_group_commitments(
     uint32_t identifier_idx, hiding_idx, binding_idx;
     secp256k1_frost_nonce_commitment item;
 
-    index = 0;
     item_size = (SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
 
     {
