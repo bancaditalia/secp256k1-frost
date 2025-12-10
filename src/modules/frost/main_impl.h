@@ -1061,8 +1061,8 @@ static void encode_group_commitments(
         for (index = 0; index < num_signers; index++) {
             item = signing_commitments[index];
             identifier_idx = item_size * index;
-            hiding_idx = SCALAR_SIZE + item_size * index;
-            binding_idx = SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + item_size * index;
+            hiding_idx = identifier_idx + SCALAR_SIZE;
+            binding_idx = hiding_idx + SERIALIZED_PUBKEY_X_ONLY_SIZE;
 
             serialize_scalar(&(buffer[identifier_idx]), item.index);
             secp256k1_frost_gej_deserialize(&hiding_cmt, item.hiding);
