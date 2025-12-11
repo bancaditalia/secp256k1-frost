@@ -1076,45 +1076,6 @@ static void encode_group_commitments(
     }
 }
 
-/* TODO: H4(msg) and H5(encoded_group_commitments) is the same for each participant; move in
- * compute_binding_factors */
-static void compute_binding_factor(
-        /* out */ secp256k1_scalar *binding_factor,
-                  uint32_t index,
-                  const unsigned char *msg,
-                  uint32_t msg_length,
-                  uint32_t num_signers,
-                  const secp256k1_frost_nonce_commitment *signing_commitments) {
-
-    unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE] = {0};
-
-    /* Compute H4 of message */
-    unsigned char binding_factor_hash[SHA256_SIZE];
-    uint32_t encoded_group_commitments_size;
-    unsigned char *encoded_group_commitments;
-
-    /* unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE]; */
-    compute_hash_h4(rho_input, msg, msg_length);
-
-    encoded_group_commitments_size = num_signers * (SCALAR_SIZE +
-                                                    SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE);
-    encoded_group_commitments = (unsigned char *) checked_malloc(&default_error_callback,
-                                                                 encoded_group_commitments_size);
-    encode_group_commitments(encoded_group_commitments, num_signers, signing_commitments);
-    compute_hash_h5(&(rho_input[SHA256_SIZE]), encoded_group_commitments, encoded_group_commitments_size);
-
-    free(encoded_group_commitments);
-
-    /* rho_input = msg_hash || encoded_commitment_hash || serialize_scalar(identifier) */
-    serialize_scalar(&(rho_input[SHA256_SIZE + SHA256_SIZE]), index);
-
-    /* Compute binding factor for participant (index); binding_factor = H.H1(rho_input) */
-    compute_hash_h1(binding_factor_hash, rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
-
-    /* Convert to scalar (overflow ignored on purpose) */
-    convert_b32_to_scalar(binding_factor_hash, binding_factor);
-}
-
 static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
                                   const secp256k1_context *ctx,
                         /* out */ secp256k1_frost_binding_factors *binding_factors,
@@ -1122,26 +1083,57 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
                                   uint32_t msg_length,
                                   uint32_t num_signers,
                                   secp256k1_frost_nonce_commitment *signing_commitments) {
-    uint32_t index;
+    unsigned char rho_input[SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE] = {0};
+    unsigned char binding_factor_hash[SHA256_SIZE];
+    uint32_t encoded_group_commitments_size, index;
+
     if (num_signers == 0) {
         return 0;
     }
-    binding_factors->num_binding_factors = num_signers;
+
+    /* msg_hash = H4(msg) */
+    compute_hash_h4(rho_input,
+                    msg,
+                    msg_length);
 
     /* Note: this sorting is performed in place; but this is acceptable. */
     secp256k1_hsort(signing_commitments, num_signers, sizeof(*signing_commitments),
                     secp256k1_frost_signing_commitments_sort_cmp, (void *) ctx);
 
+    /* encoded_commitment_hash = H5(encode_group_commitment_list(commitment_list)) */
+    {
+        unsigned char *encoded_group_commitments;
+        encoded_group_commitments_size = num_signers * (SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE
+                                                        + SERIALIZED_PUBKEY_X_ONLY_SIZE);
+        encoded_group_commitments = (unsigned char *) checked_malloc(&default_error_callback,
+                                                                     encoded_group_commitments_size);
+        encode_group_commitments(encoded_group_commitments, num_signers, signing_commitments);
+
+        compute_hash_h5(&(rho_input[SHA256_SIZE]),
+                        encoded_group_commitments,
+                        encoded_group_commitments_size);
+        free(encoded_group_commitments);
+    }
+
+    /* At this point, rho_input_prefix = group_public_key_enc || msg_hash || encoded_commitment_hash */
+    binding_factors->num_binding_factors = num_signers;
     for (index = 0; index < num_signers; index++) {
-        compute_binding_factor(&(binding_factors->binding_factors[index]),
-                               signing_commitments[index].index,
-                               msg,
-                               msg_length,
-                               num_signers,
-                               signing_commitments);
+        /* rho_input = rho_input_prefix || G.SerializeScalar(identifier) */
+        serialize_scalar(&(rho_input[SHA256_SIZE + SHA256_SIZE]),
+                         signing_commitments[index].index);
+
+        /* Compute binding factor for participant (index): binding_factor = H1(rho_input) */
+        compute_hash_h1(binding_factor_hash,
+                        rho_input,
+                        SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
+        convert_b32_to_scalar(binding_factor_hash, &(binding_factors->binding_factors[index]));
 
         binding_factors->participant_indexes[index] = signing_commitments[index].index;
     }
+
+    /* Clean-up temporary variables */
+    memset(rho_input, 0, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
+    memset(binding_factor_hash, 0, SHA256_SIZE);
 
     return 1;
 }
