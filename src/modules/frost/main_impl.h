@@ -116,10 +116,10 @@ static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp
     secp256k1_fe_get_b32(out32, &(commitment.x));
 }
 
-static void serialize_scalar(const uint32_t value, unsigned char *ret) {
+static void serialize_scalar(const uint32_t value, unsigned char *out32) {
     secp256k1_scalar value_as_scalar;
     secp256k1_scalar_set_int(&value_as_scalar, value);
-    secp256k1_scalar_get_b32(ret, &value_as_scalar);
+    secp256k1_scalar_get_b32(out32, &value_as_scalar);
     secp256k1_scalar_clear(&value_as_scalar);
 }
 
