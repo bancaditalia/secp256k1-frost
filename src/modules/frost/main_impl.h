@@ -116,7 +116,7 @@ static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp
     secp256k1_fe_get_b32(out32, &(commitment.x));
 }
 
-static void serialize_scalar(const uint32_t value, unsigned char *out32) {
+static void serialize_scalar(unsigned char *out32, const uint32_t value) {
     secp256k1_scalar value_as_scalar;
     secp256k1_scalar_set_int(&value_as_scalar, value);
     secp256k1_scalar_get_b32(out32, &value_as_scalar);
@@ -627,7 +627,7 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
 
     secp256k1_frost_gej_serialize_xonly(challenge_input, commitment);
     secp256k1_frost_gej_serialize_xonly(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key);
-    serialize_scalar(index, &(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]));
+    serialize_scalar(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]), index);
     memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
 
@@ -1065,7 +1065,7 @@ static void encode_group_commitments(
             hiding_idx = SCALAR_SIZE + item_size * index;
             binding_idx = SCALAR_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + item_size * index;
 
-            serialize_scalar(item.index, &(buffer[identifier_idx]));
+            serialize_scalar(&(buffer[identifier_idx]), item.index);
             secp256k1_frost_gej_deserialize(&hiding_cmt, item.hiding);
             secp256k1_frost_gej_serialize_xonly(&(buffer[hiding_idx]), &hiding_cmt);
             secp256k1_frost_gej_deserialize(&binding_cmt, item.binding);
@@ -1107,7 +1107,7 @@ static void compute_binding_factor(
     free(encoded_group_commitments);
 
     /* rho_input = msg_hash || encoded_commitment_hash || serialize_scalar(identifier) */
-    serialize_scalar(index, &(rho_input[SHA256_SIZE + SHA256_SIZE]));
+    serialize_scalar(&(rho_input[SHA256_SIZE + SHA256_SIZE]), index);
 
     /* Compute binding factor for participant (index); binding_factor = H.H1(rho_input) */
     compute_hash_h1(binding_factor_hash, rho_input, SHA256_SIZE + SHA256_SIZE + SCALAR_SIZE);
