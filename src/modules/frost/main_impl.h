@@ -128,12 +128,12 @@ static int secp256k1_frost_gej_serialize_compact(unsigned char *out32, const sec
     return 1;
 }
 
-static int secp256k1_frost_signature_serialize(unsigned char *output64,
-                                                const secp256k1_frost_signature *signature) {
-    if (secp256k1_frost_gej_serialize_compact(output64, &(signature->r)) == 0) {
+static int secp256k1_frost_signature_serialize(unsigned char *output,
+                                               const secp256k1_frost_signature *signature) {
+    if (secp256k1_frost_gej_serialize_compact(output, &(signature->r)) == 0) {
         return 0;
     }
-    secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
+    secp256k1_scalar_get_b32(&output[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
     return 1;
 }
 
