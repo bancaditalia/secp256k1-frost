@@ -640,9 +640,9 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     convert_b32_to_scalar(hash_value, challenge);
 
     /* cleaning out the input buffer */
-    if (challenge_input != NULL) {
-        free(challenge_input);
-    }
+
+    /* Free all allocated vars */
+    free(challenge_input);
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ctx, const secp256k1_scalar *challenge,
