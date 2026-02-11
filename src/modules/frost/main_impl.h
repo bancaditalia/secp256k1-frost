@@ -116,7 +116,7 @@ static void serialize_scalar(unsigned char *out32, const uint32_t value) {
     secp256k1_scalar_clear(&value_as_scalar);
 }
 
-static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp256k1_gej *point) {
+static void secp256k1_frost_gej_serialize_compact(unsigned char *out32, const secp256k1_gej *point) {
     secp256k1_ge p;
     secp256k1_ge_set_gej_safe(&p, point);
     secp256k1_fe_normalize_var(&(p.x));
@@ -125,7 +125,7 @@ static void secp256k1_frost_gej_serialize_xonly(unsigned char *out32, const secp
 
 static void secp256k1_frost_signature_serialize(unsigned char *output64,
                                                 const secp256k1_frost_signature *signature) {
-    secp256k1_frost_gej_serialize_xonly(output64, &(signature->r));
+    secp256k1_frost_gej_serialize_compact(output64, &(signature->r));
     secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
 }
 
@@ -625,8 +625,8 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     challenge_input_length = SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE + nonce_length;
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
 
-    secp256k1_frost_gej_serialize_xonly(challenge_input, commitment);
-    secp256k1_frost_gej_serialize_xonly(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key);
+    secp256k1_frost_gej_serialize_compact(challenge_input, commitment);
+    secp256k1_frost_gej_serialize_compact(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key);
     serialize_scalar(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]), index);
     memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
@@ -1023,8 +1023,8 @@ static void compute_challenge(secp256k1_scalar *challenge,
     unsigned char pk[SERIALIZED_PUBKEY_X_ONLY_SIZE];
     secp256k1_sha256 sha;
 
-    secp256k1_frost_gej_serialize_xonly(rx, group_commitment);
-    secp256k1_frost_gej_serialize_xonly(pk, group_public_key);
+    secp256k1_frost_gej_serialize_compact(rx, group_commitment);
+    secp256k1_frost_gej_serialize_compact(pk, group_public_key);
 
     secp256k1_sha256_initialize(&sha);
     sha.s[0] = 0x9cecba11ul;
@@ -1066,9 +1066,9 @@ static void encode_group_commitments(
 
             serialize_scalar(&(buffer[identifier_idx]), item.index);
             secp256k1_frost_gej_deserialize(&hiding_cmt, item.hiding);
-            secp256k1_frost_gej_serialize_xonly(&(buffer[hiding_idx]), &hiding_cmt);
+            secp256k1_frost_gej_serialize_compact(&(buffer[hiding_idx]), &hiding_cmt);
             secp256k1_frost_gej_deserialize(&binding_cmt, item.binding);
-            secp256k1_frost_gej_serialize_xonly(&(buffer[binding_idx]), &binding_cmt);
+            secp256k1_frost_gej_serialize_compact(&(buffer[binding_idx]), &binding_cmt);
         }
         /* Clean-up temporary variables */
         secp256k1_gej_clear(&hiding_cmt);
