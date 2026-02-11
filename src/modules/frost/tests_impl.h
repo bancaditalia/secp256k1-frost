@@ -3217,7 +3217,7 @@ void test_serialize_and_deserialize_frost_signature(void) {
     secp256k1_ecmult_gen(&test_ctx->ecmult_gen_ctx, &(signature.r), &(signature.z));
 
     /* Serialize and deserialize */
-    secp256k1_frost_signature_serialize(serialized_signature, &signature);
+    CHECK(secp256k1_frost_signature_serialize(serialized_signature, &signature) == 1);
     CHECK(secp256k1_frost_signature_deserialize(&deserialized_signature, serialized_signature) == 1);
 
     is_equal = secp256k1_gej_eq(&(signature.r), &(deserialized_signature.r));
@@ -3300,7 +3300,7 @@ void test_secp256k1_frost_verify_to_be_valid(void) {
     secp256k1_scalar_mul(&(signature.z), &private_key, &challenge);
     secp256k1_scalar_add(&(signature.z), &nonce, &(signature.z));
 
-    secp256k1_frost_signature_serialize(serialized_signature, &signature);
+    CHECK(secp256k1_frost_signature_serialize(serialized_signature, &signature) == 1);
     secp256k1_frost_gej_serialize(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,
@@ -3410,7 +3410,7 @@ void test_secp256k1_frost_verify_to_be_invalid(void) {
     secp256k1_scalar_set_int(&invalid_nonce, 100);
     secp256k1_scalar_add(&(signature.z), &invalid_nonce, &(signature.z));
 
-    secp256k1_frost_signature_serialize(serialized_signature, &signature);
+    CHECK(secp256k1_frost_signature_serialize(serialized_signature, &signature) == 1);
     secp256k1_frost_gej_serialize(keypair.public_keys.group_public_key, &pubkey);
 
     result = secp256k1_frost_verify(test_ctx,

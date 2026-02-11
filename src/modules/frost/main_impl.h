@@ -116,17 +116,22 @@ static void serialize_scalar(unsigned char *out32, const uint32_t value) {
     secp256k1_scalar_clear(&value_as_scalar);
 }
 
-static void secp256k1_frost_gej_serialize_compact(unsigned char *out32, const secp256k1_gej *point) {
+static int secp256k1_frost_gej_serialize_compact(unsigned char *out32, const secp256k1_gej *point) {
     secp256k1_ge p;
     secp256k1_ge_set_gej_safe(&p, point);
     secp256k1_fe_normalize_var(&(p.x));
     secp256k1_fe_get_b32(out32, &(p.x));
+
+    return 1;
 }
 
-static void secp256k1_frost_signature_serialize(unsigned char *output64,
+static int secp256k1_frost_signature_serialize(unsigned char *output64,
                                                 const secp256k1_frost_signature *signature) {
-    secp256k1_frost_gej_serialize_compact(output64, &(signature->r));
+    if (secp256k1_frost_gej_serialize_compact(output64, &(signature->r)) == 0) {
+        return 0;
+    }
     secp256k1_scalar_get_b32(&output64[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
+    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
@@ -611,7 +616,7 @@ static SECP256K1_WARN_UNUSED_RESULT int generate_shares_with_random_polynomial(c
  *       public_key: participant public key used for computing the challenge.
  *       commitment: commitment to a random value.
  */
-static void generate_dkg_challenge(secp256k1_scalar *challenge,
+static int generate_dkg_challenge(secp256k1_scalar *challenge,
                                    const uint32_t index, const unsigned char *context_nonce,
                                    const uint32_t nonce_length,
                                    const secp256k1_gej *public_key,
@@ -625,8 +630,14 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
     challenge_input_length = SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE + nonce_length;
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
 
-    secp256k1_frost_gej_serialize_compact(challenge_input, commitment);
-    secp256k1_frost_gej_serialize_compact(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key);
+    if (secp256k1_frost_gej_serialize_compact(challenge_input, commitment) == 0) {
+        free(challenge_input);
+        return 0;
+    }
+    if (secp256k1_frost_gej_serialize_compact(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE]), public_key) == 0) {
+        free(challenge_input);
+        return 0;
+    }
     serialize_scalar(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]), index);
     memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
@@ -643,6 +654,8 @@ static void generate_dkg_challenge(secp256k1_scalar *challenge,
 
     /* Free all allocated vars */
     free(challenge_input);
+
+    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int is_valid_zkp(const secp256k1_context *ctx, const secp256k1_scalar *challenge,
@@ -708,7 +721,10 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_begin(
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &s_pub, &secret);
     secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &zkp_r, &r);
     secp256k1_frost_gej_serialize(vss_commitments->zkp_r, &zkp_r);
-    generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r);
+    if (generate_dkg_challenge(&challenge, generator_index, context, context_length, &s_pub, &zkp_r) == 0) {
+        secp256k1_scalar_clear(&secret);
+        return 0;
+    }
 
     /* z = r + secret * H(context, G^secret, G^r) */
     secp256k1_scalar_mul(&z, &secret, &challenge);
@@ -740,10 +756,15 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_dkg_commit
 
     secp256k1_frost_gej_deserialize(&peer_zkp_r, peer_commitment->zkp_r);
     secp256k1_frost_gej_deserialize(&secret_commitment, peer_commitment->coefficient_commitments[0].data);
-    generate_dkg_challenge(&challenge, peer_commitment->index,
+    if (generate_dkg_challenge(&challenge, peer_commitment->index,
                            context, context_length,
                            &secret_commitment,
-                           &peer_zkp_r);
+                           &peer_zkp_r) == 0) {
+        /* Clean-up temporary variables */
+        secp256k1_gej_clear(&peer_zkp_r);
+        secp256k1_gej_clear(&secret_commitment);
+        return 0;
+    }
 
     is_valid = is_valid_zkp(ctx, &challenge, peer_commitment);
 
@@ -1013,7 +1034,7 @@ static SECP256K1_WARN_UNUSED_RESULT int compute_group_commitment(
     return 1;
 }
 
-static void compute_challenge(secp256k1_scalar *challenge,
+static int compute_challenge(secp256k1_scalar *challenge,
                               const unsigned char *msg,
                               uint32_t msg_length,
                               const secp256k1_gej *group_public_key,
@@ -1023,8 +1044,12 @@ static void compute_challenge(secp256k1_scalar *challenge,
     unsigned char pk[SERIALIZED_PUBKEY_X_ONLY_SIZE];
     secp256k1_sha256 sha;
 
-    secp256k1_frost_gej_serialize_compact(rx, group_commitment);
-    secp256k1_frost_gej_serialize_compact(pk, group_public_key);
+    if (secp256k1_frost_gej_serialize_compact(rx, group_commitment) == 0) {
+        return 0;
+    }
+    if (secp256k1_frost_gej_serialize_compact(pk, group_public_key) == 0) {
+        return 0;
+    }
 
     secp256k1_sha256_initialize(&sha);
     sha.s[0] = 0x9cecba11ul;
@@ -1042,9 +1067,11 @@ static void compute_challenge(secp256k1_scalar *challenge,
     secp256k1_sha256_write(&sha, msg, msg_length);
     secp256k1_sha256_finalize(&sha, buf);
     secp256k1_scalar_set_b32(challenge, buf, NULL);
+
+    return 1;
 }
 
-static void encode_group_commitments(
+static int encode_group_commitments(
         /* out */ unsigned char *buffer,
                   uint32_t num_signers,
                   const secp256k1_frost_nonce_commitment *signing_commitments) {
@@ -1066,14 +1093,20 @@ static void encode_group_commitments(
 
             serialize_scalar(&(buffer[identifier_idx]), item.index);
             secp256k1_frost_gej_deserialize(&hiding_cmt, item.hiding);
-            secp256k1_frost_gej_serialize_compact(&(buffer[hiding_idx]), &hiding_cmt);
+            if (secp256k1_frost_gej_serialize_compact(&(buffer[hiding_idx]), &hiding_cmt) == 0) {
+                return 0;
+            }
             secp256k1_frost_gej_deserialize(&binding_cmt, item.binding);
-            secp256k1_frost_gej_serialize_compact(&(buffer[binding_idx]), &binding_cmt);
+            if (secp256k1_frost_gej_serialize_compact(&(buffer[binding_idx]), &binding_cmt) == 0) {
+                return 0;
+            }
         }
         /* Clean-up temporary variables */
         secp256k1_gej_clear(&hiding_cmt);
         secp256k1_gej_clear(&binding_cmt);
     }
+
+    return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int compute_binding_factors(
@@ -1601,7 +1634,15 @@ SECP256K1_API int secp256k1_frost_aggregate(
     }
 
     /* Serialize aggregated signature */
-    secp256k1_frost_signature_serialize(signature, &aggregated_signature);
+    if (secp256k1_frost_signature_serialize(signature, &aggregated_signature) == 0) {
+        free_binding_factors(&binding_factors);
+
+        /* Clean-up temporary variables */
+        secp256k1_scalar_clear(&challenge);
+        secp256k1_gej_clear(&group_pubkey);
+
+        return 0;
+    }
 
     /* Free all allocated vars */
     free_binding_factors(&binding_factors);
