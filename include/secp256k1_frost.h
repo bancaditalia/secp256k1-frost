@@ -53,6 +53,9 @@ extern "C" {
  * SECTION: Data Structures
  *******************************************************/
 
+/* BIP340 mode */
+#define FROST_SIGNATURE_SIZE   (64)
+
 /* Share of the group secret key.
  *
  * The secret share results from evaluating the (generator) Shamir polynomial in the receiver index point.

@@ -25,7 +25,7 @@ int main(void) {
     uint32_t index;
     unsigned char binding_seed[32] = {0};
     unsigned char hiding_seed[32] = {0};
-    unsigned char signature[64];
+    unsigned char signature[FROST_SIGNATURE_SIZE];
     int is_signature_valid;
     int return_val;
 

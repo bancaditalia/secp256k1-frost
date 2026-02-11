@@ -20,7 +20,7 @@ typedef struct {
   secp256k1_frost_nonce_commitment *signing_commitments;
   secp256k1_frost_pubkey *public_keys;
   secp256k1_frost_signature_share *signature_shares;
-  unsigned char signature[64];
+  unsigned char signature[FROST_SIGNATURE_SIZE];
 } secp256k1_frost_data_per_iter;
 
 typedef struct {
@@ -57,7 +57,7 @@ static void bench_frost_sign(void* arg, int iters) {
 static void bench_frost_aggregate(void* arg, int iters) {
     bench_frost_data *data = (bench_frost_data *)arg;
     int i, signer_index;
-    unsigned char signature[65];
+    unsigned char signature[FROST_SIGNATURE_SIZE];
 
     for (i = 0; i < iters; i++) {
         signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
