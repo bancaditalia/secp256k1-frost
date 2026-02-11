@@ -139,8 +139,8 @@ static int secp256k1_frost_signature_serialize(unsigned char *output,
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
                                                                               const unsigned char *serialized_signature) {
-    secp256k1_fe x;
     secp256k1_ge deserialized_point;
+    secp256k1_fe x;
     if (secp256k1_fe_set_b32_limit(&x, serialized_signature) == 0) {
         return 0;
     }
