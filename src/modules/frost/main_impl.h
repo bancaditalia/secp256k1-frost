@@ -122,6 +122,9 @@ static int secp256k1_frost_gej_serialize_compact(unsigned char *out32, const sec
     secp256k1_fe_normalize_var(&(p.x));
     secp256k1_fe_get_b32(out32, &(p.x));
 
+    /* Clean-up temporary variables */
+    secp256k1_ge_clear(&p);
+
     return 1;
 }
 
