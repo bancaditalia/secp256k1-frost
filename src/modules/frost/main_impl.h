@@ -116,11 +116,11 @@ static void serialize_scalar(unsigned char *out32, const uint32_t value) {
     secp256k1_scalar_clear(&value_as_scalar);
 }
 
-static int secp256k1_frost_gej_serialize_compact(unsigned char *out32, const secp256k1_gej *point) {
+static int secp256k1_frost_gej_serialize_compact(unsigned char *output, const secp256k1_gej *point) {
     secp256k1_ge p;
     secp256k1_ge_set_gej_safe(&p, point);
     secp256k1_fe_normalize_var(&(p.x));
-    secp256k1_fe_get_b32(out32, &(p.x));
+    secp256k1_fe_get_b32(output, &(p.x));
 
     /* Clean-up temporary variables */
     secp256k1_ge_clear(&p);
