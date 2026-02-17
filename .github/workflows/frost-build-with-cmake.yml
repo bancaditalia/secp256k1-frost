@@ -10,16 +10,21 @@ on:
 
 jobs:
   build-with-cmake:
+    name: "Build and test with CMake (${{ case(matrix.bip340_mode == 'ON', 'BIP340', 'RFC9591') }} mode)"
     runs-on: ubuntu-24.04
     # Use fedora:43 to compile using gcc-15.2
     container:
       image: fedora:43
+    strategy:
+      matrix:
+        bip340_mode: [ON]
     steps:
       - name: Install build dependencies
         run: |
           dnf install -y \
               cmake \
-              gcc
+              gcc \
+              python3
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
@@ -40,6 +45,7 @@ jobs:
               -DSECP256K1_ENABLE_MODULE_ELLSWIFT=OFF \
               -DSECP256K1_ENABLE_MODULE_EXTRAKEYS=OFF \
               -DSECP256K1_ENABLE_MODULE_FROST=ON \
+              -DSECP256K1_ENABLE_MODULE_FROST_BIP340_MODE=${{ matrix.bip340_mode }} \
               -DSECP256K1_ENABLE_MODULE_MUSIG=OFF \
               -DSECP256K1_ENABLE_MODULE_RECOVERY=OFF \
               -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=OFF \
