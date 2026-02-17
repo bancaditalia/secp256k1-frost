@@ -199,8 +199,8 @@ AC_ARG_ENABLE(module_frost,
 
 AC_ARG_ENABLE(module_frost_bip340_mode,
   AS_HELP_STRING([--enable-module-frost-bip340-mode],
-                 [enable FROST BIP-340 compatibility mode (experimental) [default=yes]]), [],
-  [SECP_SET_DEFAULT([enable_module_frost_bip340_mode], [yes], [yes])])
+                 [enable FROST BIP-340 compatibility mode (experimental) [default=no]]), [],
+  [SECP_SET_DEFAULT([enable_module_frost_bip340_mode], [no], [yes])])
 # FROST_SPECIFIC - END
 
 AC_ARG_ENABLE(external_default_callbacks,
