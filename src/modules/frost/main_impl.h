@@ -175,13 +175,23 @@ static int secp256k1_frost_signature_serialize(unsigned char *output,
     if (secp256k1_frost_gej_serialize_compact(output, &(signature->r)) == 0) {
         return 0;
     }
+    #ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
     secp256k1_scalar_get_b32(&output[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z));
+    #else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
+
     return 1;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(secp256k1_frost_signature *signature,
                                                                               const unsigned char *serialized_signature) {
     secp256k1_ge deserialized_point;
+
+    #ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
     secp256k1_fe x;
     if (secp256k1_fe_set_b32_limit(&x, serialized_signature) == 0) {
         return 0;
@@ -193,6 +203,10 @@ static SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_signature_deserialize(se
     if (convert_b32_to_scalar(&serialized_signature[SERIALIZED_PUBKEY_X_ONLY_SIZE], &(signature->z)) == 0) {
         return 0;
     }
+    #else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
     return 1;
 }
 
@@ -663,6 +677,8 @@ static int generate_dkg_challenge(secp256k1_scalar *challenge,
     unsigned char hash_value[SHA256_SIZE];
     secp256k1_sha256 sha;
 
+    #ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
     /* challenge_input = commitment || pk || index || context_nonce */
     challenge_input_length = SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE + nonce_length;
     challenge_input = (unsigned char *) checked_malloc(&default_error_callback, challenge_input_length);
@@ -678,6 +694,10 @@ static int generate_dkg_challenge(secp256k1_scalar *challenge,
     serialize_scalar(&(challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE]), index);
     memcpy(&challenge_input[SERIALIZED_PUBKEY_X_ONLY_SIZE + SERIALIZED_PUBKEY_X_ONLY_SIZE + SCALAR_SIZE],
            context_nonce, nonce_length);
+    #else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* compute hash of the challenge_input */
     secp256k1_sha256_initialize(&sha);
@@ -1080,6 +1100,9 @@ static int compute_challenge(secp256k1_scalar *challenge,
                               const secp256k1_gej *group_public_key,
                               const secp256k1_gej *group_commitment) {
     unsigned char buf[SCALAR_SIZE];
+
+    #ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
     unsigned char rx[SERIALIZED_PUBKEY_X_ONLY_SIZE];
     unsigned char pk[SERIALIZED_PUBKEY_X_ONLY_SIZE];
     secp256k1_sha256 sha;
@@ -1111,6 +1134,10 @@ static int compute_challenge(secp256k1_scalar *challenge,
     /* Clean-up temporary variables */
     secp256k1_memclear(rx, SERIALIZED_PUBKEY_X_ONLY_SIZE);
     secp256k1_memclear(pk, SERIALIZED_PUBKEY_X_ONLY_SIZE);
+    #else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+    #endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
     /* Clean-up temporary variables */
     secp256k1_memclear(buf, SCALAR_SIZE);
