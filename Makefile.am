@@ -324,10 +324,26 @@ if ENABLE_MODULE_FROST
 src/modules/frost/vectors/bigint_test_vectors.h:
 	python3 $(top_srcdir)/tools/frost_generate_bigint_test_vectors.py > $@
 
+src/modules/frost/vectors/ietf_h2c_iso3map_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_h2c_isomap_test_vectors.py > $@
+
+src/modules/frost/vectors/ietf_h2c_sqrt_ratio_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_h2c_sqrt_ratio_test_vectors.py > $@
+
+src/modules/frost/vectors/ietf_h2c_rfc9380_expander_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_ietf_h2c_rfc9380_expander_test_vectors.py $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_expand_message_xmd_SHA256_38.json $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_expand_message_xmd_SHA256_256.json > $@
+
+src/modules/frost/vectors/ietf_h2c_rfc9380_test_vectors.h:
+	python3 $(top_srcdir)/tools/frost_generate_ietf_h2c_rfc9380_test_vectors.py $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_ro_test_vectors.json $(top_srcdir)/src/modules/frost/vectors/ietf_h2c_rfc9380_nu_test_vectors.json > $@
+
 FROST_TV_DIR = src/modules/frost/vectors
 
 TESTVECTORS += \
-  $(FROST_TV_DIR)/bigint_test_vectors.h
+  $(FROST_TV_DIR)/bigint_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_iso3map_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_rfc9380_expander_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_rfc9380_test_vectors.h \
+  $(FROST_TV_DIR)/ietf_h2c_sqrt_ratio_test_vectors.h
 
 endif
 # FROST_SPECIFIC - END
