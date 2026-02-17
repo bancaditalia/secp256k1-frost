@@ -53,8 +53,13 @@ extern "C" {
  * SECTION: Data Structures
  *******************************************************/
 
-/* BIP340 mode */
-#define FROST_SIGNATURE_SIZE   (64)
+#ifdef ENABLE_MODULE_FROST_BIP340_MODE
+    /* BIP340 mode */
+    #define FROST_SIGNATURE_SIZE   (64)
+#else
+    /* RFC9591 mode */
+    #error "Only BIP340 mode is supported: please define ENABLE_MODULE_FROST_BIP340_MODE"
+#endif /* ENABLE_MODULE_FROST_BIP340_MODE */
 
 /* Share of the group secret key.
  *
