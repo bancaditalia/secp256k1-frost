@@ -163,6 +163,20 @@ if(SECP256K1_BUILD_TESTS)
     target_compile_definitions(tests PRIVATE VERIFY)
     target_link_libraries(tests secp256k1_precomputed secp256k1_asm $<$<AND:$<BOOL:${SECP256K1_ENABLE_MODULE_FROST}>,$<PLATFORM_ID:Windows>>:bcrypt>) # FROST_SPECIFIC: conditionally add brcypt for Frost-enabled builds on Windows (MinGW)
     add_test(NAME secp256k1_tests COMMAND tests)
+
+    # FROST_SPECIFIC - START
+    if(SECP256K1_ENABLE_MODULE_FROST)
+      target_include_directories(secp256k1 PRIVATE ${CMAKE_BINARY_DIR}/src/modules/frost/vectors)
+
+      # Add generated headers to sources (mark them GENERATED to avoid CMake errors)
+      set_source_files_properties(${FROST_TEST_VECTOR_HEADERS} PROPERTIES GENERATED TRUE)
+      target_sources(secp256k1 PRIVATE ${FROST_TEST_VECTOR_HEADERS})
+
+      # Ensure headers are generated before building the library
+      add_dependencies(secp256k1 generate_frost_test_vectors)
+      add_dependencies(tests generate_frost_test_vectors)
+    endif()
+    # FROST_SPECIFIC - END
   endif()
 endif()
 
