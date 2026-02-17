@@ -17,7 +17,7 @@ jobs:
       image: fedora:43
     strategy:
       matrix:
-        bip340_mode: [ON]
+        bip340_mode: [ON, OFF]
     steps:
       - name: Install build dependencies
         run: |
