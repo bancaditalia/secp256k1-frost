@@ -21,7 +21,7 @@ jobs:
               cmake \
               gcc \
               valgrind
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: Build with CMake (only enabling FROST, tests, examples and benchmark)

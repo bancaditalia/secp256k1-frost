@@ -35,7 +35,7 @@ jobs:
         run: echo HOME=/root >> "$GITHUB_ENV"
       - name: set up wine 2
         run: wine64 winecfg /v win11
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: "Autotools: run autogen"
