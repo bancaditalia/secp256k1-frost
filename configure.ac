@@ -6,7 +6,7 @@ AC_PREREQ([2.60])
 define(_PKG_VERSION_MAJOR, 0)
 define(_PKG_VERSION_MINOR, 5)
 define(_PKG_VERSION_PATCH, 1)
-define(_PKG_VERSION_FROST_BUILD, 1) # FROST_SPECIFIC: this field controls the final digit in the version identifier "MAJOR.MINOR.BUILD-frost-FROST_BUILD". WARNING: this number should be equal to the fourth digit of project(... VERSION ...) in CMakeLists.txt
+define(_PKG_VERSION_FROST_BUILD, 2) # FROST_SPECIFIC: this field controls the final digit in the version identifier "MAJOR.MINOR.BUILD-frost-FROST_BUILD". WARNING: this number should be equal to the fourth digit of project(... VERSION ...) in CMakeLists.txt
 define(_PKG_VERSION_IS_RELEASE, true)
 
 # The library version is based on libtool versioning of the ABI. The set of
