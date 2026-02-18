@@ -1,0 +1,14 @@
+version: "0.5.1"
+description: "secp256k1 with FROST threshold signatures for ESP32"
+url: "https://github.com/privkeyio/secp256k1-frost"
+repository: "https://github.com/privkeyio/secp256k1-frost.git"
+license: "MIT"
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32c3
+  - esp32c6
+dependencies:
+  idf:
+    version: ">=5.0"

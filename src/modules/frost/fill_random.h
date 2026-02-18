@@ -21,11 +21,9 @@
  * Windows -> `BCryptGenRandom`(`bcrypt.h`). https://docs.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom
  */
 
-#if defined(_WIN32)
-/*
- * The defined WIN32_NO_STATUS macro disables return code definitions in
- * windows.h, which avoids "macro redefinition" MSVC warnings in ntstatus.h.
- */
+#if defined(ESP_PLATFORM)
+#include <esp_random.h>
+#elif defined(_WIN32)
 #define WIN32_NO_STATUS
 #include <windows.h>
 #undef WIN32_NO_STATUS
@@ -46,7 +44,10 @@
 
 /* Returns 1 on success, and 0 on failure. */
 static int fill_random(unsigned char* data, size_t size) {
-#if defined(_WIN32)
+#if defined(ESP_PLATFORM)
+    esp_fill_random(data, size);
+    return 1;
+#elif defined(_WIN32)
     NTSTATUS res = BCryptGenRandom(NULL, data, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     if (res != STATUS_SUCCESS || size > ULONG_MAX) {
         return 0;
