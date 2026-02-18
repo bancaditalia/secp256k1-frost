@@ -12,7 +12,7 @@ jobs:
   verify-version-and-description-consistency:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
       - name: check that the version numbers contained in configure.ac and CMakeLists.txt are consistent with each other, and that the project descriptions end with the same reference to Frost
