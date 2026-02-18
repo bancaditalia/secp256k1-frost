@@ -12,7 +12,7 @@ jobs:
   example-and-tests-mingw-autotools-cmake:
     runs-on: ubuntu-24.04
     container:
-      image: fedora:42
+      image: fedora:43
     steps:
       - name: Install build dependencies
         run: |
@@ -112,7 +112,7 @@ jobs:
           #
           # "--update=none-fail" did not work on coreutils 9.5 (Fedora 41) due
           # to a bug. It required a workaround that is no longer necessary with
-          # coreutils 9.6 (Fedora 42).
+          # coreutils 9.6 (Fedora 42 or later).
           cp --update=none-fail "${GITHUB_WORKSPACE}/build/examples/frost_example.exe" "${GITHUB_WORKSPACE}/build/src"
           wine "${GITHUB_WORKSPACE}/build/src/frost_example.exe"
       - name: "Cmake: run frost benchmark via Wine (10 iterations)"
