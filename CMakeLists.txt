@@ -1,5 +1,25 @@
 cmake_minimum_required(VERSION 3.16)
 
+if(ESP_PLATFORM)
+    idf_component_register(
+        SRCS "src/secp256k1.c" "src/precomputed_ecmult.c" "src/precomputed_ecmult_gen.c"
+        INCLUDE_DIRS "include"
+        PRIV_REQUIRES esp_system
+    )
+
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE
+        ENABLE_MODULE_FROST=1
+        ENABLE_MODULE_SCHNORRSIG=1
+        ENABLE_MODULE_EXTRAKEYS=1
+        ENABLE_MODULE_ECDH=1
+        COMB_BLOCKS=2
+        COMB_TEETH=5
+        ECMULT_WINDOW_SIZE=4
+    )
+
+    return()
+endif()
+
 project(libsecp256k1
   # The package (a.k.a. release) version is based on semantic versioning 2.0.0 of
   # the API. All changes in experimental modules are treated as
