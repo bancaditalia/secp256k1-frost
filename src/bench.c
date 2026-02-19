@@ -5,6 +5,7 @@
  ***********************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../include/secp256k1.h"
@@ -15,16 +16,20 @@ static void help(int default_iters) {
     printf("Benchmarks the following algorithms:\n");
     printf("    - ECDSA signing/verification\n");
 
-#ifdef ENABLE_MODULE_ECDH
-    printf("    - ECDH key exchange (optional module)\n");
-#endif
-
 #ifdef ENABLE_MODULE_RECOVERY
     printf("    - Public key recovery (optional module)\n");
 #endif
 
+#ifdef ENABLE_MODULE_ECDH
+    printf("    - ECDH key exchange (optional module)\n");
+#endif
+
 #ifdef ENABLE_MODULE_SCHNORRSIG
     printf("    - Schnorr signatures (optional module)\n");
+#endif
+
+#ifdef ENABLE_MODULE_ELLSWIFT
+    printf("    - ElligatorSwift (optional module)\n");
 #endif
 
 /* FROST_SPECIFIC - START */
@@ -209,11 +214,11 @@ int main(int argc, char** argv) {
            || have_flag(argc, argv, "--help")
            || have_flag(argc, argv, "help")) {
             help(default_iters);
-            return 0;
+            return EXIT_SUCCESS;
         } else if (invalid_args) {
             fprintf(stderr, "./bench: unrecognized argument.\n\n");
             help(default_iters);
-            return 1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -222,7 +227,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "ecdh")) {
         fprintf(stderr, "./bench: ECDH module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-ecdh.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -230,7 +235,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "recover") || have_flag(argc, argv, "ecdsa_recover")) {
         fprintf(stderr, "./bench: Public key recovery module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-recovery.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -238,7 +243,7 @@ int main(int argc, char** argv) {
     if (have_flag(argc, argv, "schnorrsig") || have_flag(argc, argv, "schnorrsig_sign") || have_flag(argc, argv, "schnorrsig_verify")) {
         fprintf(stderr, "./bench: Schnorr signatures module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-schnorrsig.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -248,7 +253,7 @@ int main(int argc, char** argv) {
         have_flag(argc, argv, "ellswift_ecdh")) {
         fprintf(stderr, "./bench: ElligatorSwift module not enabled.\n");
         fprintf(stderr, "Use ./configure --enable-module-ellswift.\n\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 #endif
 
@@ -302,5 +307,5 @@ int main(int argc, char** argv) {
 #endif
 /* FROST_SPECIFIC - END */
 
-    return 0;
+    return EXIT_SUCCESS;
 }
