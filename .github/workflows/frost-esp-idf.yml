@@ -1,0 +1,72 @@
+name: "FROST: build for ESP-IDF"
+
+on:
+  push:
+    branches:
+      - frost
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  esp-idf-build:
+    name: "ESP32: ESP-IDF cross-compilation"
+    runs-on: ubuntu-24.04
+    container:
+      image: espressif/idf:v5.4
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - esp32
+          - esp32s3
+          - esp32c3
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Create test project
+        run: |
+          mkdir -p /tmp/test_project/main
+          mkdir -p /tmp/test_project/components
+          ln -s "${GITHUB_WORKSPACE}" /tmp/test_project/components/secp256k1
+
+          cat > /tmp/test_project/CMakeLists.txt << 'EOF'
+          cmake_minimum_required(VERSION 3.16)
+          include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+          project(secp256k1_test)
+          EOF
+
+          cat > /tmp/test_project/main/CMakeLists.txt << 'EOF'
+          idf_component_register(
+              SRCS "test_main.c"
+              INCLUDE_DIRS "."
+              REQUIRES secp256k1
+          )
+          EOF
+
+          cat > /tmp/test_project/main/test_main.c << 'EOF'
+          #include <stdio.h>
+          #include <secp256k1.h>
+          #include <secp256k1_frost.h>
+
+          void app_main(void) {
+              secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+              if (ctx) {
+                  printf("secp256k1 context created successfully\n");
+
+                  secp256k1_frost_keygen_cache cache;
+                  printf("FROST keygen cache size: %zu\n", sizeof(cache));
+
+                  secp256k1_context_destroy(ctx);
+              }
+          }
+          EOF
+
+      - name: Build for ${{ matrix.target }}
+        working-directory: /tmp/test_project
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py set-target ${{ matrix.target }}
+          idf.py build
