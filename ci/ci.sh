@@ -36,6 +36,17 @@ print_environment
 
 env >> test_env.log
 
+# Skip if the requested compiler is not available (e.g., clang-snapshot not installed).
+case "${CC:-undefined}" in
+    *snapshot*)
+        BASE_CC=$(echo "$CC" | cut -d' ' -f1)
+        if ! command -v "$BASE_CC" > /dev/null 2>&1; then
+            echo "Skipping: $BASE_CC is not available"
+            exit 0
+        fi
+        ;;
+esac
+
 # If gcc is requested, assert that it's in fact gcc (and not some symlinked Apple clang).
 case "${CC:-undefined}" in
     *gcc*)

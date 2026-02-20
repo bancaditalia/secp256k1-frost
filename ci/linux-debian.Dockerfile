@@ -61,6 +61,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install clang snapshot, see https://apt.llvm.org/
+# The snapshot repo can transiently break (stale index pointing to rotated packages),
+# so make this step non-fatal and let CI skip clang-snapshot tests when unavailable.
 RUN \
     # Setup GPG keys of LLVM repository
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y wget && \
@@ -73,10 +75,10 @@ RUN \
     apt-get update && \
     # Determine the version number of the LLVM development branch
     LLVM_VERSION=$(apt-cache search --names-only '^clang-[0-9]+$' | sort -V | tail -1 | cut -f1 -d" " | cut -f2 -d"-" ) && \
-    # Install
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "clang-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev" && \
-    # Create symlink
-    ln -s "/usr/bin/clang-${LLVM_VERSION}" /usr/bin/clang-snapshot && \
+    # Install (non-fatal: snapshot repo packages may be temporarily unavailable)
+    ( DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "clang-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev" && \
+      ln -s "/usr/bin/clang-${LLVM_VERSION}" /usr/bin/clang-snapshot || \
+      echo "WARNING: clang-snapshot installation failed, skipping" ) && \
     # Clean up
     apt-get autoremove -y wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
