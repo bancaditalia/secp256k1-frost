@@ -2,8 +2,10 @@
 
 ## [0.6.0-frost-1] - 2026-02-19
 
+Merge `secp256k1` v0.6.0. 
+
 #### Changed
- - rebased on secp256k1 **v0.6.0**
+ - rebased on secp256k1 v0.6.0
  - replace `memset()` with `secp256k1_memclear()` (a new function introduced in v0.6.0) where possible
  - clear more temporaries in `generate_dkg_challenge()` and `compute_challenge()`
  - updated base CI images for the FROST module
