@@ -1,5 +1,19 @@
 # Changelog - FROST module
 
+## [0.7.0-frost-1] - 2026-02-25
+
+This is the first release that supports both BIP-340 and RFC9591.
+Merge `secp256k1` v0.7.0. 
+
+#### Added
+ - introduced support for RFC9591, which becomes the default mode for the library
+ - compatibility with BIP-340 is kept via the optional compilation directive `--enable-module-frost-bip340-mode` (Autotools) or `-DSECP256K1_ENABLE_MODULE_FROST_BIP340_MODE=YES` (CMake)
+
+#### Changed
+ - rebased on secp256k1 v0.7.0
+ - the upstream CI now tests the library in its default mode (i.e., RFC9591). BIP-340 mode is tested by our custom FROST CMake workflows
+ - the signature size is 65 bytes in RFC9591 mode and 64 bytes in BIP340 mode
+
 ## [0.6.0-frost-1] - 2026-02-19
 
 Merge `secp256k1` v0.6.0. 
@@ -147,6 +161,7 @@ This version was in fact never released.
 Commit `c31b9c193c3826d683ca58260ae1933dcc1a6eb6` introduces the first implementation FROST as a 
 module of secp256k1. 
 
+[0.7.0-frost-1]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.6.0-frost-1...v0.7.0-frost-1
 [0.6.0-frost-1]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.5.1-frost-2...v0.6.0-frost-1
 [0.5.1-frost-2]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.5.1-frost-1...v0.5.1-frost-2
 [0.5.1-frost-1]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.5.0-frost-1...v0.5.1-frost-1
