@@ -486,11 +486,7 @@ SECP256K1_API void secp256k1_frost_nonce_destroy(secp256k1_frost_nonce *nonce) {
         return;
     }
 
-    secp256k1_memclear(nonce->binding, SCALAR_SIZE);
-    secp256k1_memclear(nonce->hiding, SCALAR_SIZE);
-    nonce->commitments.index = 0;
-    secp256k1_memclear(nonce->commitments.binding, SERIALIZED_PUBKEY_XY_SIZE);
-    secp256k1_memclear(nonce->commitments.hiding, SERIALIZED_PUBKEY_XY_SIZE);
+    secp256k1_memclear(nonce, sizeof(*nonce));
     free(nonce);
 }
 
