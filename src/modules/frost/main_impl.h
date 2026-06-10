@@ -509,7 +509,7 @@ SECP256K1_API void secp256k1_frost_keypair_destroy(secp256k1_frost_keypair *keyp
     if (keypair == NULL) {
         return;
     }
-
+    secp256k1_memclear(keypair->secret, SCALAR_SIZE);
     free(keypair);
 }
 
