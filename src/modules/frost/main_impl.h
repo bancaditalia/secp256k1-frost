@@ -470,8 +470,6 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(const secp256k
     secp256k1_frost_gej_serialize(nonce->commitments.binding, &binding_cmt);
     secp256k1_frost_gej_serialize(nonce->commitments.hiding, &hiding_cmt);
 
-    nonce->used = 0;
-
     /* Clean-up temporary variables */
     secp256k1_scalar_clear(&hiding);
     secp256k1_scalar_clear(&binding);
@@ -479,6 +477,11 @@ SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(const secp256k
     secp256k1_gej_clear(&binding_cmt);
 
     return nonce;
+}
+
+static int secp256k1_frost_nonce_is_valid(const secp256k1_frost_nonce *nonce) {
+    return !secp256k1_is_zero_array(nonce->hiding, SCALAR_SIZE)
+        && !secp256k1_is_zero_array(nonce->binding, SCALAR_SIZE);
 }
 
 SECP256K1_API void secp256k1_frost_nonce_destroy(secp256k1_frost_nonce *nonce) {
@@ -1450,6 +1453,8 @@ SECP256K1_API int secp256k1_frost_sign(
         secp256k1_frost_nonce_commitment *signing_commitments) {
 
     secp256k1_frost_binding_factors binding_factors;
+    secp256k1_frost_nonce nonce_local;
+    int ret;
 
     if (signature_share == NULL || msg == NULL || keypair == NULL || nonce == NULL || signing_commitments == NULL) {
         return 0;
@@ -1458,8 +1463,12 @@ SECP256K1_API int secp256k1_frost_sign(
         return 0;
     }
 
-    /* TODO: remove this; the correct use of nonce is a developer responsibility */
-    if (nonce->used == 1) {
+    /*
+     * A zeroed nonce has already been consumed or was not initialized
+     * correctly. This check is only a best-effort safeguard: applications
+     * must still prevent reuse of copied nonce material.
+     */
+    if (!secp256k1_frost_nonce_is_valid(nonce)) {
         return 0;
     }
     binding_factors.num_binding_factors = num_signers;
@@ -1483,26 +1492,31 @@ SECP256K1_API int secp256k1_frost_sign(
         return 0;
     }
 
-    /* Sign the message */
-    if (secp256k1_frost_sign_internal(signature_share,
-                                      msg,
-                                      msg_length,
-                                      num_signers,
-                                      keypair,
-                                      nonce,
-                                      signing_commitments,
-                                      &binding_factors) == 0) {
-        return 0;
-    }
+    /*
+     * Copy the nonce to temporary storage and immediately invalidate the
+     * caller-owned object. From this point onward, the nonce is considered
+     * consumed regardless of whether signing succeeds.
+     */
+    memcpy(&nonce_local, nonce, sizeof(nonce_local));
+    secp256k1_memclear(nonce->hiding, sizeof(nonce->hiding));
+    secp256k1_memclear(nonce->binding, sizeof(nonce->binding));
 
-    /* Mark nonce as used */
-    /* TODO: remove side effect on nonce */
-    nonce->used = 1;
+    ret = secp256k1_frost_sign_internal(signature_share,
+                                        msg,
+                                        msg_length,
+                                        num_signers,
+                                        keypair,
+                                        &nonce_local,
+                                        signing_commitments,
+                                        &binding_factors);
+
+    /* Clear the temporary copy containing secret nonce material. */
+    secp256k1_memclear(&nonce_local, sizeof(nonce_local));
 
     /* Free all allocated vars */
     free_binding_factors(&binding_factors); /*FIXME: also the allocated unsigned char *  to be freed */
 
-    return 1;
+    return ret;
 }
 
 static SECP256K1_WARN_UNUSED_RESULT int check_commitment_and_response_integrity(

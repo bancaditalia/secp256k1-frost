@@ -112,6 +112,13 @@ int main(void) {
                                           nonces[index],
                                           signing_commitments);
         assert(return_val == 1);
+
+        /* sign() has cleared the nonce object. Destroy it now to free the
+         * allocation. The public commitments copied into signing_commitments
+         * remain available for aggregation.
+         */
+        secp256k1_frost_nonce_destroy(nonces[index]);
+        nonces[index] = NULL;
     }
 
     /*** Aggregation ***/
@@ -155,9 +162,6 @@ int main(void) {
 
     /* This will clear everything from the context and free the memory */
     secp256k1_frost_vss_commitments_destroy(dealer_commitments);
-    for (index = 0; index < EXAMPLE_MIN_PARTICIPANTS; index++) {
-        secp256k1_frost_nonce_destroy(nonces[index]);
-    }
     secp256k1_context_destroy(sign_verify_ctx);
 
     return EXIT_SUCCESS;

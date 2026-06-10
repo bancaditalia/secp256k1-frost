@@ -55,6 +55,32 @@ A [FROST usage example](../../../examples/frost.c) can be found in the [examples
 To compile the examples, you need to configure with `--enable-examples` (or, the `cmake` flag `-DSECP256K1_BUILD_EXAMPLES=ON`).
 Specifically, to compile the [FROST example](../../../examples/frost.c), you also need to configure with `--enable-module-frost`. If `cmake` is used, you need to provide the `-DSECP256K1_ENABLE_MODULE_FROST=ON -DSECP256K1_EXPERIMENTAL=ON` flags.
 
+### Nonce lifecycle
+
+Each FROST participant must use fresh hiding and binding nonces for every
+signing session. Reusing secret nonce material can reveal the participant's
+secret key share.
+
+`secp256k1_frost_sign()` consumes the supplied nonce by clearing its secret
+hiding and binding nonce values. The corresponding public nonce commitments
+are retained in the nonce object because they are not secret and may still be
+needed during signature-share aggregation.
+
+A consumed nonce object must not be passed to
+`secp256k1_frost_sign()` again. It may, however, be retained temporarily to
+access its public commitments. Once those commitments are no longer needed,
+the object should be released with `secp256k1_frost_nonce_destroy()`.
+
+The aggregation API expects the public commitments of all participating
+signers as an array of `secp256k1_frost_nonce_commitment`. Applications may
+construct this array either before or after signature-share generation,
+provided that the commitments correspond exactly to the signing session and
+signer set.
+
+Clearing the secret fields is a best-effort safeguard against accidental
+reuse of the same object. Applications remain responsible for preventing
+copies or serialized versions of secret nonce material from being reused.
+
 ## Compliance with the IETF Standardized version of FROST
 
 FROST is an experimental module of the secp256k1 library.

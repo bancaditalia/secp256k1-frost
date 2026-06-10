@@ -93,7 +93,6 @@ typedef struct {
 
 /* Nonce used for signing. */
 typedef struct {
-    int used; /* 1 if true, 0 if false */
     unsigned char hiding[32];
     unsigned char binding[32];
     secp256k1_frost_nonce_commitment commitments;
@@ -197,17 +196,27 @@ SECP256K1_API void secp256k1_frost_vss_commitments_destroy(
 ) SECP256K1_ARG_NONNULL(1);
 
 /*
- * Create fresh FROST nonce for signing.
+ * Create a fresh FROST nonce for signing.
  *
- *  Generates two random nonces (hiding and binding) and their corresponding
- *  public commitments. Nonces must never be reused.
- *  This function uses malloc to allocate memory.
+ * Generates two secret nonce scalars (hiding and binding) and their
+ * corresponding public commitments. A newly created nonce object is valid for
+ * exactly one signing attempt.
+ *
+ * The application must:
+ *  - provide fresh, cryptographically secure seeds;
+ *  - avoid copying or serializing the nonce object;
+ *  - never reuse the nonce in another signing session;
+ *  - destroy the nonce object after signing (beware, the nonce structure
+ *     contains also the related commitments, which are required during aggregation).
+ *
+ * Reusing secret nonce material can reveal the participant's secret key share.
+ * This function uses malloc to allocate memory.
  *
  *  Returns: pointer to a newly allocated nonce object.
  *  Args:         ctx: pointer to a context object, initialized for signing.
  *  In:       keypair: pointer to an initialized keypair.
- *     binding_seed32: pointer to a 32-byte random seed (NULL resets to initial state)
- *      hiding_seed32: pointer to a 32-byte random seed (NULL resets to initial state)
+ *     binding_seed32: pointer to a fresh 32-byte cryptographically secure seed.
+ *      hiding_seed32: pointer to a fresh 32-byte cryptographically secure seed.
  */
 SECP256K1_API secp256k1_frost_nonce *secp256k1_frost_nonce_create(
         const secp256k1_context *ctx,
@@ -363,27 +372,51 @@ SECP256K1_API SECP256K1_WARN_UNUSED_RESULT int secp256k1_frost_keygen_with_deale
  * Create a FROST signature share.
  *
  * Each participant generates a signature share for a given message using its
- * private key, nonce, and the set of signing commitments of all participants.
- * This corresponds to "Round Two - Signature Share Generation" in RFC 9591 §5.2.
- *      https://www.rfc-editor.org/rfc/rfc9591#name-round-two-signature-share-g
+ * private key, secret nonce, and the set of public signing commitments of all
+ * participants. This corresponds to "Round Two - Signature Share Generation"
+ * in RFC 9591 Section 5.2.
  *
- * The resulting signature share must be sent back to the Coordinator for
- * aggregation. After producing the share, the signer MUST securely delete
- * the nonce and its corresponding commitment, as nonces must never be reused.
+ * The resulting signature share must be sent to the Coordinator for
+ * aggregation.
  *
- *  Returns 1 on success, 0 on failure.
- *  Args:             ctx: pointer to a context object, initialized for signing.
- *  Out:  signature_share: pointer to the struct that will hold the signature share.
- *  In:               msg: pointer to the message to be signed.
+ * This function consumes the supplied nonce: before returning from the signing
+ * computation, it clears the nonce object's secret nonce material. The nonce
+ * object must not be used in another signing call and should subsequently be
+ * passed to secp256k1_frost_nonce_destroy() to release its allocation.
+ *
+ * Clearing the supplied object is a best-effort protection against accidental
+ * nonce reuse. It cannot prevent reuse if the application has copied or
+ * serialized the secret nonce material. Applications remain responsible for
+ * generating fresh nonce seeds, preventing copies, securely storing nonce
+ * objects, and never reusing nonce material across signing sessions. Reusing a
+ * FROST nonce can reveal the participant's secret key share.
+ *
+ * Public nonce commitments needed by the Coordinator must be copied into
+ * signing_commitments before this function is called. Aggregation and final
+ * signature verification do not require the secret nonce object.
+ *
+ * Returns: 1 on success, 0 on failure. Once actual signing processing begins,
+ *          the nonce is consumed even if signing returns 0.
+ *
+ * Args:             ctx: pointer to a context object initialized for signing.
+ * Out:  signature_share: pointer to the structure that will hold the signature
+ *                        share.
+ * In:               msg: pointer to the message to be signed.
  *             msg_length: length of the message in bytes.
- *            num_signers: total number of signers participating in this round.
- *                keypair: pointer to an initialized keypair (participant's secret and public key).
- *                  nonce: pointer to an initialized nonce associated with this round.
- *    signing_commitments: pointer to an array of `num_signers` nonce commitments for all participants.
+ *            num_signers: number of signers participating in this round.
+ *                keypair: initialized participant keypair.
+ * In/Out:             nonce: fresh nonce created for this signing session.
+ *                             Its secret contents are cleared by this function.
+ * In:   signing_commitments: array containing the public nonce commitments of
+ *                             all num_signers participants.
  *
- *  Notes:
- *   - Each signer must ensure its identifier and commitments appear in `signing_commitments`.
- *   - The nonce must not be reused for another signing session.
+ * Notes:
+ *  - Each signer must ensure that its identifier and commitments appear in
+ *    signing_commitments.
+ *  - A fresh nonce must be generated for every signing session.
+ *  - The nonce object must not be copied or serialized.
+ *  - Call secp256k1_frost_nonce_destroy() afterwards to release the zeroed
+ *      nonce allocation.
  */
 SECP256K1_API int secp256k1_frost_sign(
         const secp256k1_context *ctx,

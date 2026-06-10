@@ -2002,7 +2002,7 @@ void test_secp256k1_frost_sign_aggregate_verify_more_parts_to_be_valid(void) {
 /*
  * Do not sign when an already used nonce is provided.
  */
-void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
+void test_secp256k1_frost_sign_consumes_nonce(void) {
     secp256k1_context *sign_ctx;
     secp256k1_frost_vss_commitments *dealer_commitments;
     secp256k1_frost_keygen_secret_share shares_by_participant[3];
@@ -2039,14 +2039,29 @@ void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
                                                      &keypairs[index],
                                                      binding_seed,
                                                      hiding_seed);
+        CHECK(nonces[index] != NULL);
         memcpy(&signing_commitments[index], &(nonces[index]->commitments), sizeof(secp256k1_frost_nonce_commitment));
 
-        /* Step 2.b: mark nonce as used */
-        nonces[index]->used = 1;
     }
 
-    /* Step 3: compute signature shares */
+    /* Step 3: compute signature shares (first nonce usage, signature should succeed) */
     for (index = 0; index < threshold_signers; index++) {
+        result = secp256k1_frost_sign(sign_ctx,
+                                      &(signature_shares[index]),
+                                      msg32,
+                                      32,
+                                      threshold_signers,
+                                      &keypairs[index],
+                                      nonces[index],
+                                      signing_commitments);
+        CHECK(result == 1);
+    }
+
+    /* Step 4: compute signature shares with nonce reuse. This time, signing should fail */
+    for (index = 0; index < threshold_signers; index++) {
+        CHECK(secp256k1_is_zero_array(nonces[index]->hiding, sizeof(nonces[index]->hiding)));
+        CHECK(secp256k1_is_zero_array(nonces[index]->binding, sizeof(nonces[index]->binding)));
+
         result = secp256k1_frost_sign(sign_ctx,
                                       &(signature_shares[index]),
                                       msg32,
@@ -2063,6 +2078,197 @@ void test_secp256k1_frost_sign_with_used_nonce_to_not_sign(void) {
     for (index = 0; index < threshold_signers; index++) {
         secp256k1_frost_nonce_destroy(nonces[index]);
     }
+    secp256k1_context_destroy(sign_ctx);
+}
+
+/*
+ * A nonce must be consumed once the actual signature-share computation begins,
+ * even if signing subsequently fails.
+ *
+ * The signing set contains participants 1 and 2, while participant 3 attempts
+ * to sign. The arguments are valid and binding factors can be computed, but
+ * signing fails because participant 3 is not part of the selected signing set.
+ *
+ * After the failed signing attempt:
+ *
+ *  - the secret hiding and binding nonce values must be cleared;
+ *  - the public nonce commitments must remain unchanged;
+ *  - a second signing attempt with the consumed nonce must fail.
+ */
+void test_secp256k1_frost_sign_failure_consumes_nonce(void) {
+    secp256k1_context *sign_ctx;
+    secp256k1_frost_vss_commitments *dealer_commitments;
+    secp256k1_frost_keygen_secret_share shares_by_participant[3];
+    secp256k1_frost_keypair keypairs[3];
+
+    secp256k1_frost_nonce *signer_nonces[2];
+    secp256k1_frost_nonce *excluded_nonce;
+    secp256k1_frost_nonce_commitment signing_commitments[2];
+    secp256k1_frost_nonce_commitment excluded_commitment_before;
+    secp256k1_frost_signature_share signature_share;
+
+    const unsigned char msg32[32] = {
+        'z', 's', 'd', 'W', '0', 't', 'L', '5',
+        'j', 'v', '9', 'd', '1', 'S', 'Z', 's',
+        'I', 'O', 'U', 'i', 'D', 'I', 'I', 'w',
+        'W', 'X', '7', 'n', '6', 'r', 'g', 'g'
+    };
+
+    unsigned char binding_seed[32] = {0};
+    unsigned char hiding_seed[32] = {0};
+
+    uint32_t num_participants;
+    uint32_t threshold_signers;
+    uint32_t index;
+    int result;
+
+    num_participants = 3;
+    threshold_signers = 2;
+
+    sign_ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+    dealer_commitments =
+        secp256k1_frost_vss_commitments_create(threshold_signers);
+
+    CHECK(dealer_commitments != NULL);
+
+    result = secp256k1_frost_keygen_with_dealer(
+        sign_ctx,
+        dealer_commitments,
+        shares_by_participant,
+        keypairs,
+        num_participants,
+        threshold_signers
+    );
+    CHECK(result == 1);
+
+    /*
+     * Construct a valid signing set containing participants 1 and 2.
+     */
+    for (index = 0; index < threshold_signers; index++) {
+        signer_nonces[index] = secp256k1_frost_nonce_create(
+            sign_ctx,
+            &keypairs[index],
+            binding_seed,
+            hiding_seed
+        );
+        CHECK(signer_nonces[index] != NULL);
+
+        memcpy(
+            &signing_commitments[index],
+            &signer_nonces[index]->commitments,
+            sizeof(secp256k1_frost_nonce_commitment)
+        );
+    }
+
+    /*
+     * Create a valid nonce for participant 3. This participant is not part
+     * of the signing set represented by signing_commitments.
+     */
+    excluded_nonce = secp256k1_frost_nonce_create(
+        sign_ctx,
+        &keypairs[2],
+        binding_seed,
+        hiding_seed
+    );
+    CHECK(excluded_nonce != NULL);
+
+    /*
+     * Save the public commitment so that we can verify that signing clears
+     * only secret nonce material.
+     */
+    memcpy(
+        &excluded_commitment_before,
+        &excluded_nonce->commitments,
+        sizeof(secp256k1_frost_nonce_commitment)
+    );
+
+    /*
+     * Confirm that the nonce initially contains secret material.
+     */
+    CHECK(!secp256k1_is_zero_array(
+        excluded_nonce->hiding,
+        sizeof(excluded_nonce->hiding)
+    ));
+    CHECK(!secp256k1_is_zero_array(
+        excluded_nonce->binding,
+        sizeof(excluded_nonce->binding)
+    ));
+
+    /*
+     * Participant 3 attempts to sign using a signing set that contains only
+     * participants 1 and 2.
+     *
+     * The call passes initial argument validation and computes the signing
+     * session's binding factors. It then fails during signature-share
+     * generation because participant 3 is not part of the signing set.
+     *
+     * The nonce must nevertheless be consumed.
+     */
+    result = secp256k1_frost_sign(
+        sign_ctx,
+        &signature_share,
+        msg32,
+        sizeof(msg32),
+        threshold_signers,
+        &keypairs[2],
+        excluded_nonce,
+        signing_commitments
+    );
+    CHECK(result == 0);
+
+    /*
+     * The secret nonce values must have been cleared despite the failure.
+     */
+    CHECK(secp256k1_is_zero_array(
+        excluded_nonce->hiding,
+        sizeof(excluded_nonce->hiding)
+    ));
+    CHECK(secp256k1_is_zero_array(
+        excluded_nonce->binding,
+        sizeof(excluded_nonce->binding)
+    ));
+
+    /*
+     * The corresponding public commitment is not secret and must remain
+     * available after the nonce has been consumed.
+     */
+    CHECK(memcmp(
+        &excluded_commitment_before,
+        &excluded_nonce->commitments,
+        sizeof(secp256k1_frost_nonce_commitment)
+    ) == 0);
+
+    /*
+     * A second signing attempt with the consumed nonce must fail.
+     */
+    result = secp256k1_frost_sign(
+        sign_ctx,
+        &signature_share,
+        msg32,
+        sizeof(msg32),
+        threshold_signers,
+        &keypairs[2],
+        excluded_nonce,
+        signing_commitments
+    );
+    CHECK(result == 0);
+
+    /*
+     * The failed retry must not modify the retained public commitment.
+     */
+    CHECK(memcmp(
+        &excluded_commitment_before,
+        &excluded_nonce->commitments,
+        sizeof(secp256k1_frost_nonce_commitment)
+    ) == 0);
+
+    secp256k1_frost_nonce_destroy(excluded_nonce);
+
+    for (index = 0; index < threshold_signers; index++) {
+        secp256k1_frost_nonce_destroy(signer_nonces[index]);
+    }
+
+    secp256k1_frost_vss_commitments_destroy(dealer_commitments);
     secp256k1_context_destroy(sign_ctx);
 }
 
@@ -3501,7 +3707,8 @@ void run_frost_tests(void) {
     test_secp256k1_frost_sign_null_signature_shares();
     test_secp256k1_frost_sign_more_participants_than_max_to_be_invalid();
     test_secp256k1_frost_sign_aggregate_verify_more_parts_to_be_valid();
-    test_secp256k1_frost_sign_with_used_nonce_to_not_sign();
+    test_secp256k1_frost_sign_consumes_nonce();
+    test_secp256k1_frost_sign_failure_consumes_nonce();
     test_secp256k1_frost_sign_num_signer_set_to_zero();
 
     /* Test aggregate function */
