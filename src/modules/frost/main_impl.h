@@ -1472,7 +1472,10 @@ SECP256K1_API int secp256k1_frost_sign(
     binding_factors.participant_indexes = (uint32_t *)
             checked_malloc(&default_error_callback, num_signers * sizeof(uint32_t));
 
-    /* Compute the binding factor(s) */
+    /*
+     * Compute values that do not require the signer's secret nonce before
+     * consuming the nonce object.
+     */
     if (compute_binding_factors(ctx,
                                 &binding_factors,
                                 msg,
@@ -1480,6 +1483,7 @@ SECP256K1_API int secp256k1_frost_sign(
                                 num_signers,
                                 keypair->public_keys.group_public_key,
                                 signing_commitments) == 0) {
+        free_binding_factors(&binding_factors);
         return 0;
     }
 
