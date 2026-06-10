@@ -1,5 +1,19 @@
 # Changelog - FROST module
 
+## [0.7.0-frost-2] - 2026-06-10
+
+This version updates the logic used to invalidate a used nonce. 
+
+#### Changed
+- Changed `secp256k1_frost_sign()` to consume and clear the supplied secret
+  nonce object. The explicit `used` flag was removed from
+  `secp256k1_frost_nonce`. A consumed nonce is represented by zeroed secret
+  nonce material and is rejected by subsequent signing calls. Applications
+  must still prevent copied or serialized nonce material from being reused.
+
+- Changed the layout of `secp256k1_frost_nonce` and therefore breaks ABI 
+  compatibility with previous experimental releases. 
+
 ## [0.7.0-frost-1] - 2026-02-25
 
 This is the first release that supports both BIP-340 and RFC9591.
@@ -161,6 +175,7 @@ This version was in fact never released.
 Commit `c31b9c193c3826d683ca58260ae1933dcc1a6eb6` introduces the first implementation FROST as a 
 module of secp256k1. 
 
+[0.7.0-frost-2]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.7.0-frost-1...v0.7.0-frost-2
 [0.7.0-frost-1]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.6.0-frost-1...v0.7.0-frost-1
 [0.6.0-frost-1]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.5.1-frost-2...v0.6.0-frost-1
 [0.5.1-frost-2]: https://github.com/bancaditalia/secp256k1-frost/compare/v0.5.1-frost-1...v0.5.1-frost-2
