@@ -432,6 +432,7 @@ static void shamir_coefficients_destroy(shamir_coefficients *coefficients) {
         return;
     }
 
+    secp256k1_memclear(coefficients->coefficients, coefficients->num_coefficients * sizeof(secp256k1_scalar));
     coefficients->index = 0;
     coefficients->num_coefficients = 0;
     free(coefficients->coefficients);
