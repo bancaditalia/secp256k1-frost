@@ -11,8 +11,18 @@
 #include "fill_random.h"
 
 #define BENCH_FROST_MSGLEN (32)
-#define BENCH_FROST_MAX_PARTICIPANTS 3
-#define BENCH_FROST_THR_PARTICIPANTS 2
+
+typedef struct {
+    uint32_t threshold;
+    uint32_t participants;
+} bench_frost_config;
+
+static const bench_frost_config bench_frost_configs[] = {
+    {2, 3},
+    {3, 5},
+    {5, 9},
+    {10, 15}
+};
 
 typedef struct {
     secp256k1_frost_keypair* keypairs;
@@ -42,6 +52,8 @@ typedef struct {
 typedef struct {
     secp256k1_context* ctx;
     int n;
+    uint32_t threshold;
+    uint32_t participants;
     const unsigned char** msgs;
     secp256k1_frost_data_per_iter* state;
 } bench_frost_data;
@@ -51,7 +63,8 @@ static void bench_frost_sign_setup(void* arg) {
     secp256k1_frost_nonce* nonce;
     unsigned char hiding_seed[32];
     unsigned char binding_seed[32];
-    int i, j, signer_index;
+    int i;
+    uint32_t j, signer_index;
 
     /*
      * Prepare a fresh signing session for every timed iteration.
@@ -60,14 +73,14 @@ static void bench_frost_sign_setup(void* arg) {
      * region, so bench_frost_sign() measures only signature-share generation.
      */
     for (i = 0; i < data->n; i++) {
-        signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
+        signer_index = (uint32_t)i % data->threshold;
 
         if (data->state[i].sign_nonce != NULL) {
             secp256k1_frost_nonce_destroy(data->state[i].sign_nonce);
             data->state[i].sign_nonce = NULL;
         }
 
-        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+        for (j = 0; j < data->threshold; j++) {
             fill_random(binding_seed, sizeof(binding_seed));
             fill_random(hiding_seed, sizeof(hiding_seed));
 
@@ -104,10 +117,11 @@ static void bench_frost_sign_setup(void* arg) {
 static void bench_frost_sign(void* arg, int iters) {
     bench_frost_data* data = (bench_frost_data*)arg;
     secp256k1_frost_signature_share signature_share;
-    int i, signer_index;
+    int i;
+    uint32_t signer_index;
 
     for (i = 0; i < iters; i++) {
-        signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
+        signer_index = (uint32_t)i % data->threshold;
 
         CHECK(data->state[i].sign_nonce != NULL);
 
@@ -115,7 +129,7 @@ static void bench_frost_sign(void* arg, int iters) {
             &signature_share,
             data->msgs[i],
             BENCH_FROST_MSGLEN,
-            BENCH_FROST_THR_PARTICIPANTS,
+            data->threshold,
             &data->state[i].keypairs[signer_index],
             data->state[i].sign_nonce,
             data->state[i].signing_commitments) == 1);
@@ -140,11 +154,12 @@ static void bench_frost_sign_teardown(void* arg, int iters) {
 
 static void bench_frost_aggregate(void* arg, int iters) {
     bench_frost_data* data = (bench_frost_data*)arg;
-    int i, signer_index;
     unsigned char signature[FROST_SIGNATURE_SIZE];
+    int i;
+    uint32_t signer_index;
 
     for (i = 0; i < iters; i++) {
-        signer_index = i % BENCH_FROST_THR_PARTICIPANTS;
+        signer_index = (uint32_t)i % data->threshold;
 
         CHECK(secp256k1_frost_aggregate(data->ctx,
             signature,
@@ -154,7 +169,7 @@ static void bench_frost_aggregate(void* arg, int iters) {
             data->state[i].public_keys,
             data->state[i].aggregate_commitments,
             data->state[i].signature_shares,
-            BENCH_FROST_THR_PARTICIPANTS) == 1);
+            data->threshold) == 1);
     }
 }
 
@@ -171,23 +186,34 @@ static void bench_frost_verify(void* arg, int iters) {
     }
 }
 
-static void bench_frost_data_init(bench_frost_data* data, int iters) {
-    int i, j;
+static void bench_frost_data_init(bench_frost_data* data, int iters, const bench_frost_config* config) {
+    int i;
+    uint32_t j;
     unsigned char hiding_seed[32], binding_seed[32];
     secp256k1_frost_vss_commitments* dealer_commitments;
-    secp256k1_frost_keygen_secret_share shares_by_participant[BENCH_FROST_MAX_PARTICIPANTS];
-    secp256k1_frost_nonce* aggregate_nonces[BENCH_FROST_THR_PARTICIPANTS];
+    secp256k1_frost_keygen_secret_share* shares_by_participant;
+    secp256k1_frost_nonce** aggregate_nonces;
     unsigned char* msg;
 
     /* Allocate benchmark data */
     data->ctx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
     data->n = iters;
+    data->threshold = config->threshold;
+    data->participants = config->participants;
     data->state = (secp256k1_frost_data_per_iter*)malloc(iters * sizeof(secp256k1_frost_data_per_iter));
     data->msgs = (const unsigned char**)malloc(iters * sizeof(unsigned char*));
 
     CHECK(data->ctx != NULL);
     CHECK(data->state != NULL);
     CHECK(data->msgs != NULL);
+
+    shares_by_participant = (secp256k1_frost_keygen_secret_share*)malloc(
+        data->participants * sizeof(secp256k1_frost_keygen_secret_share));
+    aggregate_nonces = (secp256k1_frost_nonce**)malloc(
+        data->threshold * sizeof(secp256k1_frost_nonce*));
+
+    CHECK(shares_by_participant != NULL);
+    CHECK(aggregate_nonces != NULL);
 
     /*
      * Prepare immutable aggregation/verification data for each iteration.
@@ -199,15 +225,15 @@ static void bench_frost_data_init(bench_frost_data* data, int iters) {
 
         msg = (unsigned char*)malloc(BENCH_FROST_MSGLEN);
         data->state[i].keypairs = (secp256k1_frost_keypair*)malloc(
-            BENCH_FROST_MAX_PARTICIPANTS * sizeof(secp256k1_frost_keypair));
+            data->participants * sizeof(secp256k1_frost_keypair));
         data->state[i].signing_commitments = (secp256k1_frost_nonce_commitment*)malloc(
-            BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_nonce_commitment));
+            data->threshold * sizeof(secp256k1_frost_nonce_commitment));
         data->state[i].aggregate_commitments = (secp256k1_frost_nonce_commitment*)malloc(
-            BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_nonce_commitment));
+            data->threshold * sizeof(secp256k1_frost_nonce_commitment));
         data->state[i].public_keys = (secp256k1_frost_pubkey*)malloc(
-            BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_pubkey));
+            data->threshold * sizeof(secp256k1_frost_pubkey));
         data->state[i].signature_shares = (secp256k1_frost_signature_share*)malloc(
-            BENCH_FROST_THR_PARTICIPANTS * sizeof(secp256k1_frost_signature_share));
+            data->threshold * sizeof(secp256k1_frost_signature_share));
 
         CHECK(msg != NULL);
         CHECK(data->state[i].keypairs != NULL);
@@ -227,20 +253,27 @@ static void bench_frost_data_init(bench_frost_data* data, int iters) {
         data->msgs[i] = msg;
 
         /* Key Generation */
-        dealer_commitments = secp256k1_frost_vss_commitments_create(BENCH_FROST_THR_PARTICIPANTS);
+        dealer_commitments = secp256k1_frost_vss_commitments_create(data->threshold);
         CHECK(dealer_commitments != NULL);
 
         CHECK(secp256k1_frost_keygen_with_dealer(data->ctx,
             dealer_commitments,
             shares_by_participant,
             data->state[i].keypairs,
-            BENCH_FROST_MAX_PARTICIPANTS,
-            BENCH_FROST_THR_PARTICIPANTS) == 1);
+            data->participants,
+            data->threshold) == 1);
 
         secp256k1_frost_vss_commitments_destroy(dealer_commitments);
 
-        /* Extract the public keys of the participating signers. */
-        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+        /*
+         * Extract the public keys of the participating signers.
+         *
+         * The benchmark signs with the first threshold participants out of the
+         * full group of participants. The remaining keypairs are generated to
+         * reflect the configured group size but do not participate in this
+         * signing session.
+         */
+        for (j = 0; j < data->threshold; j++) {
             CHECK(secp256k1_frost_pubkey_from_keypair(&data->state[i].public_keys[j], &data->state[i].keypairs[j]) == 1)
             ;
         }
@@ -249,7 +282,7 @@ static void bench_frost_data_init(bench_frost_data* data, int iters) {
          * Build a separate valid signing session used only to prepare the
          * immutable aggregation and verification benchmark inputs.
          */
-        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+        for (j = 0; j < data->threshold; j++) {
             fill_random(binding_seed, sizeof(binding_seed));
             fill_random(hiding_seed, sizeof(hiding_seed));
             aggregate_nonces[j] = secp256k1_frost_nonce_create(data->ctx,
@@ -262,12 +295,12 @@ static void bench_frost_data_init(bench_frost_data* data, int iters) {
                    &(aggregate_nonces[j]->commitments), sizeof(secp256k1_frost_nonce_commitment));
         }
 
-        for (j = 0; j < BENCH_FROST_THR_PARTICIPANTS; j++) {
+        for (j = 0; j < data->threshold; j++) {
             CHECK(secp256k1_frost_sign(data->ctx,
                 &data->state[i].signature_shares[j],
                 data->msgs[i],
                 BENCH_FROST_MSGLEN,
-                BENCH_FROST_THR_PARTICIPANTS,
+                data->threshold,
                 &data->state[i].keypairs[j],
                 aggregate_nonces[j],
                 data->state[i].aggregate_commitments) == 1);
@@ -288,8 +321,11 @@ static void bench_frost_data_init(bench_frost_data* data, int iters) {
             data->state[i].public_keys,
             data->state[i].aggregate_commitments,
             data->state[i].signature_shares,
-            BENCH_FROST_THR_PARTICIPANTS) == 1);
+            data->threshold) == 1);
     }
+
+    free(aggregate_nonces);
+    free(shares_by_participant);
 }
 
 static void bench_frost_data_cleanup(bench_frost_data* data, int iters) {
@@ -313,35 +349,61 @@ static void bench_frost_data_cleanup(bench_frost_data* data, int iters) {
     secp256k1_context_destroy((*data).ctx);
 }
 
-static void run_frost_bench(int iters, int argc, char** argv) {
+static void run_frost_bench_for_config(int iters, int argc, char** argv, const bench_frost_config* config) {
     bench_frost_data data;
     int d = argc == 1;
     int runs = 10;
+    char frost_sign_label[32];
     char frost_aggregate_label[32];
+    char frost_verify_label[32];
 
-    bench_frost_data_init(&data, iters);
+    bench_frost_data_init(&data, iters, config);
+
+    sprintf(
+        frost_sign_label,
+        "frost_sign (%u/%u)",
+        (unsigned int)config->threshold,
+        (unsigned int)config->participants
+    );
+    sprintf(
+        frost_aggregate_label,
+        "frost_aggregate (%u/%u)",
+        (unsigned int)config->threshold,
+        (unsigned int)config->participants
+    );
+    sprintf(
+        frost_verify_label,
+        "frost_verify (%u/%u)",
+        (unsigned int)config->threshold,
+        (unsigned int)config->participants
+    );
 
     if (d || have_flag(argc, argv, "frost") || have_flag(argc, argv, "sign")
         || have_flag(argc, argv, "frost_sign")) {
-        run_benchmark("frost_sign", bench_frost_sign, bench_frost_sign_setup, bench_frost_sign_teardown,
+        run_benchmark(frost_sign_label, bench_frost_sign, bench_frost_sign_setup, bench_frost_sign_teardown,
                       (void*)&data, runs, iters);
     }
     if (d || have_flag(argc, argv, "frost") || have_flag(argc, argv, "aggregate")
         || have_flag(argc, argv, "frost_aggregate")) {
-        sprintf(frost_aggregate_label, "frost_aggregate (%d/%d)",
-                BENCH_FROST_THR_PARTICIPANTS, BENCH_FROST_MAX_PARTICIPANTS);
         run_benchmark(frost_aggregate_label,
                       bench_frost_aggregate, NULL, NULL,
                       (void*)&data, runs, iters);
     }
     if (d || have_flag(argc, argv, "frost") || have_flag(argc, argv, "verify")
         || have_flag(argc, argv, "frost_verify")) {
-        run_benchmark("frost_verify", bench_frost_verify, NULL, NULL,
+        run_benchmark(frost_verify_label, bench_frost_verify, NULL, NULL,
                       (void*)&data, runs, iters);
     }
 
-    /* Cleaning up data */
     bench_frost_data_cleanup(&data, iters);
+}
+
+static void run_frost_bench(int iters, int argc, char** argv) {
+    size_t i;
+
+    for (i = 0; i < sizeof(bench_frost_configs) / sizeof(bench_frost_configs[0]); i++) {
+        run_frost_bench_for_config(iters, argc, argv, &bench_frost_configs[i]);
+    }
 }
 
 #endif /* SECP256K1_MODULE_FROST_BENCH_H */
